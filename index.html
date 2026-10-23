@@ -461,12 +461,12 @@ select option{background:var(--surface);color:var(--ink)}
   <form class="login-card" id="login-f">
     <img alt="Playskit PK" width="471" height="278">
     <h1>Playskit</h1>
-    <div class="sub">Panel de la setter</div>
-    <input type="email" id="lg-mail" placeholder="Tu mail" autocomplete="username" required aria-label="Mail">
-    <input type="password" id="lg-pass" placeholder="Contraseña" autocomplete="current-password" required aria-label="Contraseña">
-    <button class="btn pri" type="submit" id="lg-btn">Entrar</button>
+    <div class="sub" id="lg-sub">Panel de la setter</div>
+    <input type="email" id="lg-mail" placeholder="Tu mail" autocomplete="email" required aria-label="Mail">
+    <div id="lg-code-w" hidden><input type="text" id="lg-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código del mail" aria-label="Código del mail"></div>
+    <button class="btn pri" type="submit" id="lg-btn">Mandame el código</button>
     <div class="sub" id="lg-err" aria-live="polite"></div>
-    <button class="lg-swap" type="button" id="lg-swap">¿Primera vez? Crear mi cuenta</button>
+    <button class="lg-swap" type="button" id="lg-swap" hidden>Usar otro mail</button>
   </form>
 </div>
 <div class="glow" aria-hidden="true"></div>
@@ -623,7 +623,7 @@ select option{background:var(--surface);color:var(--ink)}
           <input type="text" id="eq-nombre" placeholder="Nombre" aria-label="Nombre">
           <button class="btn pri" type="submit">Sumar setter</button>
         </form>
-        <div class="sub" id="eq-msg">Después le pasás el link. Ella entra, toca “Crear mi cuenta” y elige su contraseña.</div>
+        <div class="sub" id="eq-msg">Después le pasás el link. Ella pone su mail, le llega un código y entra.</div>
       </div>
     </section>
 
@@ -817,27 +817,38 @@ function webLogin(sb){
     $("#login img").src = $(".logo .pk").src;
     $("#login").hidden=false; $("#lg-mail").focus();
     return new Promise(res=>{
-      let crear=false;
-      const modo=()=>{ $("#lg-btn").textContent = crear?"Crear mi cuenta":"Entrar";
-        $("#lg-swap").textContent = crear?"Ya tengo cuenta: entrar":"¿Primera vez? Crear mi cuenta";
-        $("#lg-pass").placeholder = crear?"Elegí una contraseña (8 o más)":"Contraseña";
-        $("#lg-pass").autocomplete = crear?"new-password":"current-password"; $("#lg-err").textContent=""; };
-      $("#lg-swap").onclick=()=>{ crear=!crear; modo(); $("#lg-mail").focus(); };
+      let listo=false, paso="mail";
+      const entrar = ses=>{ if(listo||!ses) return; listo=true; $("#login").hidden=true; res(ses); };
+      sb.auth.onAuthStateChange((_ev, ses)=>entrar(ses));   // por si tocan el link del mail
+      const volver = ()=>{ paso="mail"; $("#lg-code-w").hidden=true; $("#lg-swap").hidden=true; $("#lg-mail").readOnly=false;
+        $("#lg-btn").textContent="Mandame el código"; $("#lg-err").textContent=""; $("#lg-mail").focus(); };
+      $("#lg-swap").onclick = volver;
       $("#login-f").onsubmit = async e=>{
         e.preventDefault();
-        const email=$("#lg-mail").value.trim(), password=$("#lg-pass").value;
-        if(crear){
-          $("#lg-err").textContent="Creando tu cuenta…";
-          const r = await equipo({accion:"registrarse", email, password});
-          if(r.error){ $("#lg-err").textContent=r.error; return; }
+        const email=$("#lg-mail").value.trim();
+        if(paso==="mail"){
+          $("#lg-err").textContent="Mandando el código…";
+          const {error} = await sb.auth.signInWithOtp({email, options:{shouldCreateUser:true, emailRedirectTo: location.origin+location.pathname}});
+          if(error){ $("#lg-err").textContent = /rate|second|limit/i.test(error.message) ? "Esperá un minuto y probá de nuevo." : "No se pudo mandar el código. Revisá el mail."; return; }
+          paso="codigo"; $("#lg-code-w").hidden=false; $("#lg-swap").hidden=false; $("#lg-mail").readOnly=true;
+          $("#lg-btn").textContent="Entrar"; $("#lg-err").textContent=`Te mandamos un código a ${email}. Si no llega, mirá en spam.`; $("#lg-code").focus();
+          return;
         }
-        $("#lg-err").textContent="Entrando…";
-        const {data:d, error} = await sb.auth.signInWithPassword({email, password});
-        if(error){ $("#lg-err").textContent="Mail o contraseña incorrectos."; return; }
-        $("#lg-pass").value=""; $("#login").hidden=true; res(d.session);
+        $("#lg-err").textContent="Verificando…";
+        const {data:d, error} = await sb.auth.verifyOtp({email, token:$("#lg-code").value.replace(/\s/g,""), type:"email"});
+        if(error){ $("#lg-err").textContent="Código incorrecto o vencido. Pedí otro con “Usar otro mail”."; return; }
+        entrar(d.session);
       };
     });
   });
+}
+// Mail que entró pero Renata todavía no aprobó: no ve datos
+function esperarAprobacion(sb, email){
+  $("#login").hidden=false; $("#login img").src = $(".logo .pk").src;
+  $("#login-f").innerHTML = `<img alt="Playskit PK" width="471" height="278" src="${$(".logo .pk").src}"><h1>Casi listo</h1>
+    <div class="sub">Tu mail <b>${esc(email)}</b> todavía no está aprobado. Pedile a Renata que te sume al equipo y volvé a entrar.</div>
+    <button class="btn pri" type="button" id="lg-salir">Salir</button>`;
+  $("#lg-salir").onclick = async()=>{ await sb.auth.signOut(); location.reload(); };
 }
 /* Equipo: llama a la función "equipo" de Supabase (crea y borra usuarios con la clave secreta, del lado del servidor) */
 let SB=null, EQ=null, EQDEL=null;
@@ -855,7 +866,7 @@ async function cargarEquipo(){
 function pintarEquipo(){
   $("#eq-list").innerHTML = (EQ||[]).map(p=>`<div class="eq-row"><span class="av" style="--c:${p.rol==="admin"?"#f2a08b":"#64748b"}">${esc((p.nombre||p.email)[0].toUpperCase())}</span>
     <div class="eq-who"><b>${esc(p.nombre||p.email.split("@")[0])}</b><span class="sub">${esc(p.email)}</span></div>
-    <span class="tag ${p.activa?"":"pend"}">${p.rol==="admin"?"Admin":"Setter"} · ${p.activa?"activa":"falta crear su cuenta"}</span>
+    <span class="tag ${p.activa?"":"pend"}">${p.rol==="admin"?"Admin":"Setter"} · ${p.activa?"ya entró":"todavía no entró"}</span>
     ${p.rol==="admin" ? "" : EQDEL===p.email
       ? `<span class="sub">¿Sacarla?</span><button class="btn sm danger" data-eqok="${esc(p.email)}">Sí</button><button class="btn sm ghost" data-eqno>No</button>`
       : `<button class="btn sm ghost danger" data-eqdel="${esc(p.email)}">Sacar</button>`}</div>`).join("");
@@ -873,7 +884,7 @@ $("#eq-f").addEventListener("submit", async e=>{
   $("#eq-msg").textContent="Sumando…";
   const r = await equipo({accion:"aprobar", email, nombre});
   if(r.error){ $("#eq-msg").textContent=r.error; return; }
-  $("#eq-msg").textContent=`Listo: mandale el link a ${email}. Toca “Crear mi cuenta” con ese mail y elige su contraseña.`;
+  $("#eq-msg").textContent=`Listo: mandale el link a ${email}. Pone su mail, le llega un código y entra.`;
   $("#eq-mail").value=""; $("#eq-nombre").value="";
   cargarEquipo();
 });
@@ -1474,7 +1485,9 @@ document.addEventListener("keydown", e=>{
   if(window.PLAYSKIT_SUPABASE && window.supabase){
     const sb = window.supabase.createClient(PLAYSKIT_SUPABASE.url, PLAYSKIT_SUPABASE.key);
     SB = sb;
-    await webLogin(sb);
+    const ses = await webLogin(sb);
+    const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
+    if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
     store = supaStore(sb);
     $("#logout").hidden=false;
     $("#logout").onclick = async()=>{ await sb.auth.signOut(); location.reload(); };

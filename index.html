@@ -452,6 +452,9 @@ select option{background:var(--surface);color:var(--ink)}
 .eq-f{display:grid;grid-template-columns:1.4fr 1fr 1.3fr auto;gap:8px}
 .eq-f input{width:100%;border:1px solid var(--glass-brd);background:var(--glass-2);border-radius:14px;padding:9px 12px;font-size:14.5px;color:var(--ink)}
 @media (max-width:760px){.eq-f{grid-template-columns:1fr}}
+.lg-swap{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;font-size:14px;padding:4px}
+.tag.pend{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.eq-f{grid-template-columns:1.4fr 1fr auto}
 </style>
 
 <div class="login" id="login" hidden>
@@ -461,8 +464,9 @@ select option{background:var(--surface);color:var(--ink)}
     <div class="sub">Panel de la setter</div>
     <input type="email" id="lg-mail" placeholder="Tu mail" autocomplete="username" required aria-label="Mail">
     <input type="password" id="lg-pass" placeholder="Contraseña" autocomplete="current-password" required aria-label="Contraseña">
-    <button class="btn pri" type="submit">Entrar</button>
+    <button class="btn pri" type="submit" id="lg-btn">Entrar</button>
     <div class="sub" id="lg-err" aria-live="polite"></div>
+    <button class="lg-swap" type="button" id="lg-swap">¿Primera vez? Crear mi cuenta</button>
   </form>
 </div>
 <div class="glow" aria-hidden="true"></div>
@@ -617,10 +621,9 @@ select option{background:var(--surface);color:var(--ink)}
         <form class="eq-f" id="eq-f" autocomplete="off">
           <input type="email" id="eq-mail" placeholder="Mail de la setter" required aria-label="Mail de la setter">
           <input type="text" id="eq-nombre" placeholder="Nombre" aria-label="Nombre">
-          <input type="text" id="eq-pass" placeholder="Contraseña inicial (8 o más)" minlength="8" required autocomplete="new-password" aria-label="Contraseña inicial">
           <button class="btn pri" type="submit">Sumar setter</button>
         </form>
-        <div class="sub" id="eq-msg">Después le pasás el link de la app, su mail y su contraseña.</div>
+        <div class="sub" id="eq-msg">Después le pasás el link. Ella entra, toca “Crear mi cuenta” y elige su contraseña.</div>
       </div>
     </section>
 
@@ -814,9 +817,22 @@ function webLogin(sb){
     $("#login img").src = $(".logo .pk").src;
     $("#login").hidden=false; $("#lg-mail").focus();
     return new Promise(res=>{
+      let crear=false;
+      const modo=()=>{ $("#lg-btn").textContent = crear?"Crear mi cuenta":"Entrar";
+        $("#lg-swap").textContent = crear?"Ya tengo cuenta: entrar":"¿Primera vez? Crear mi cuenta";
+        $("#lg-pass").placeholder = crear?"Elegí una contraseña (8 o más)":"Contraseña";
+        $("#lg-pass").autocomplete = crear?"new-password":"current-password"; $("#lg-err").textContent=""; };
+      $("#lg-swap").onclick=()=>{ crear=!crear; modo(); $("#lg-mail").focus(); };
       $("#login-f").onsubmit = async e=>{
-        e.preventDefault(); $("#lg-err").textContent="Entrando…";
-        const {data:d, error} = await sb.auth.signInWithPassword({email:$("#lg-mail").value.trim(), password:$("#lg-pass").value});
+        e.preventDefault();
+        const email=$("#lg-mail").value.trim(), password=$("#lg-pass").value;
+        if(crear){
+          $("#lg-err").textContent="Creando tu cuenta…";
+          const r = await equipo({accion:"registrarse", email, password});
+          if(r.error){ $("#lg-err").textContent=r.error; return; }
+        }
+        $("#lg-err").textContent="Entrando…";
+        const {data:d, error} = await sb.auth.signInWithPassword({email, password});
         if(error){ $("#lg-err").textContent="Mail o contraseña incorrectos."; return; }
         $("#lg-pass").value=""; $("#login").hidden=true; res(d.session);
       };
@@ -839,7 +855,7 @@ async function cargarEquipo(){
 function pintarEquipo(){
   $("#eq-list").innerHTML = (EQ||[]).map(p=>`<div class="eq-row"><span class="av" style="--c:${p.rol==="admin"?"#f2a08b":"#64748b"}">${esc((p.nombre||p.email)[0].toUpperCase())}</span>
     <div class="eq-who"><b>${esc(p.nombre||p.email.split("@")[0])}</b><span class="sub">${esc(p.email)}</span></div>
-    <span class="tag">${p.rol==="admin"?"Admin":"Setter"}</span>
+    <span class="tag ${p.activa?"":"pend"}">${p.rol==="admin"?"Admin":"Setter"} · ${p.activa?"activa":"falta crear su cuenta"}</span>
     ${p.rol==="admin" ? "" : EQDEL===p.email
       ? `<span class="sub">¿Sacarla?</span><button class="btn sm danger" data-eqok="${esc(p.email)}">Sí</button><button class="btn sm ghost" data-eqno>No</button>`
       : `<button class="btn sm ghost danger" data-eqdel="${esc(p.email)}">Sacar</button>`}</div>`).join("");
@@ -853,12 +869,12 @@ $("#eq-list").addEventListener("click", async e=>{
 });
 $("#eq-f").addEventListener("submit", async e=>{
   e.preventDefault();
-  const email=$("#eq-mail").value.trim(), password=$("#eq-pass").value, nombre=$("#eq-nombre").value.trim();
+  const email=$("#eq-mail").value.trim(), nombre=$("#eq-nombre").value.trim();
   $("#eq-msg").textContent="Sumando…";
-  const r = await equipo({accion:"crear", email, password, nombre});
+  const r = await equipo({accion:"aprobar", email, nombre});
   if(r.error){ $("#eq-msg").textContent=r.error; return; }
-  $("#eq-msg").textContent=`Listo: ${email} ya puede entrar. Pasale el link, su mail y su contraseña.`;
-  $("#eq-mail").value=""; $("#eq-pass").value=""; $("#eq-nombre").value="";
+  $("#eq-msg").textContent=`Listo: mandale el link a ${email}. Toca “Crear mi cuenta” con ese mail y elige su contraseña.`;
+  $("#eq-mail").value=""; $("#eq-nombre").value="";
   cargarEquipo();
 });
 

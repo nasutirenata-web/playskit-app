@@ -463,6 +463,25 @@ select option{background:var(--surface);color:var(--ink)}
 .logo .pk{width:120px}
 .login-card img{width:230px}
 .pie-acts{display:flex;gap:2px;flex-wrap:wrap}
+
+/* Perfiles */
+.pf-mio{margin-bottom:8px;max-width:760px}
+.pf-edit{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.pf-campos{flex:1;min-width:240px;display:flex;flex-direction:column;gap:10px}
+.pf-campos input[type=text]{width:100%;border:1px solid var(--glass-brd);background:var(--glass-2);border-radius:14px;padding:9px 12px;color:var(--ink)}
+.pf-foto{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--glass-brd)}
+.pf-foto.g{width:96px;height:96px}
+.pf-foto.ini{display:grid;place-items:center;background:var(--chrome);color:#04262a;font-weight:700;font-size:20px}
+.pf-foto.g.ini{font-size:34px}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.pf-card{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:center}
+.pf-nom{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pf-nom b{font-weight:600;font-size:16px}
+.pf-nom .tag{align-self:flex-start}
+.pf-nums{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pf-nums div{background:var(--glass-2);border:1px solid var(--glass-brd);border-radius:12px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.pf-nums b{font-size:20px;font-weight:500}
+.pf-nums span{font-size:11.5px;color:var(--muted)}
 </style>
 
 <div class="login" id="login" hidden>
@@ -496,9 +515,10 @@ select option{background:var(--surface);color:var(--ink)}
     <button data-tab="cargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M2 21c0-4 3.6-7 8-7s8 3 8 7"/><path d="M19 4v6M16 7h6"/></svg><span>Cargar DJs</span></button>
     <button data-tab="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M1.5 21c0-4 3.4-7 7.5-7s7.5 3 7.5 7"/><path d="M16 4a4 4 0 0 1 0 8M22.5 21c0-3-1.8-5.4-4.5-6.5"/></svg><span>Todos</span><em class="badge soft" id="b-leads"></em></button>
     <button data-tab="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg><span>Mensajes</span></button>
+    <button data-tab="perfiles" id="tab-perfiles" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Perfiles</span></button>
     <button data-tab="reporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Reporte</span></button>
   </nav>
-  <div class="side-foot">Atajos: teclas 1 a 6 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
+  <div class="side-foot">Atajos: teclas 1 a 7 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
 </div>
 <div class="page">
   <div class="topbar">
@@ -617,6 +637,13 @@ select option{background:var(--surface);color:var(--ink)}
       </form>
     </div>
     </div>
+  </section>
+
+  <!-- PERFILES (versión web) -->
+  <section id="v-perfiles" hidden>
+    <div class="card pf-mio" id="pf-mio"></div>
+    <h2 class="h2s" id="pf-titulo">Equipo</h2>
+    <div class="pf-grid" id="pf-grid"></div>
   </section>
 
   <!-- REPORTE -->
@@ -865,6 +892,72 @@ function esperarAprobacion(sb, email){
     <button class="btn pri" type="button" id="lg-salir">Salir</button>`;
   $("#lg-salir").onclick = async()=>{ await sb.auth.signOut(); location.reload(); };
 }
+/* Perfiles: datos del equipo (función "equipo") + números calculados con "por" de cada DJ y charla */
+let PF=null, PF_CARGANDO=false;
+async function cargarPerfiles(){
+  if(!SB || PF_CARGANDO) return; PF_CARGANDO=true;
+  const r = await equipo({accion:"perfiles"}); PF_CARGANDO=false;
+  if(r.error){ toast(r.error); return; }
+  PF = r; if(TAB==="perfiles") renderPerfiles();
+}
+function numerosDe(mail){
+  const L=Object.values(LEADS), C=Object.values(CHARLAS), es=x=>(x||"").toLowerCase()===mail;
+  const p=k=>L.filter(d=>es(d.por?.[k])).length;
+  return {
+    cargados:p("cargado"), mensajes:p("dm"),
+    seguimientos:L.reduce((a,d)=>a+Object.entries(d.por||{}).filter(([k,v])=>k.startsWith("seg_")&&es(v)).length,0),
+    respuestas:p("resp"), planes:p("planes"), quieren:p("quiere"), ventas:p("cerrado"),
+    charlas:C.filter(c=>es(c.por)).length, vendidas:C.filter(c=>es(c.por)&&c.resultado==="si").length,
+  };
+}
+function fotoDe(p, grande){
+  const ini=((p.nombre||p.email)[0]||"?").toUpperCase();
+  return p.foto ? `<img class="pf-foto ${grande?"g":""}" src="${esc(p.foto)}" alt="">` : `<span class="pf-foto ${grande?"g":""} ini">${esc(ini)}</span>`;
+}
+function tarjetaPerfil(p){
+  const n=numerosDe(p.email.toLowerCase());
+  const nom=[p.nombre,p.apellido].filter(Boolean).join(" ")||p.email.split("@")[0];
+  const cifras=[["DJs cargados",n.cargados],["Mensajes",n.mensajes],["Seguimientos",n.seguimientos],["Respuestas",n.respuestas],["Planes",n.planes],["Quieren pagar",n.quieren],["Ventas",n.ventas],["Charlas ✓",`${n.vendidas}/${n.charlas}`]];
+  return `<div class="card pf-card">${fotoDe(p)}<div class="pf-nom"><b>${esc(nom)}</b><span class="sub">${esc(p.email)}</span>
+    <span class="tag ${p.activa?"":"pend"}">${p.rol==="admin"?"Admin":"Setter"}${p.activa?"":" · sin cuenta"}</span></div>
+    <div class="pf-nums">${cifras.map(([l,v])=>`<div><b class="mono">${v}</b><span>${l}</span></div>`).join("")}</div></div>`;
+}
+function renderPerfiles(){
+  if(!SB){ $("#pf-mio").innerHTML=`<div class="sub">Los perfiles están en la versión web.</div>`; $("#pf-grid").innerHTML=""; return; }
+  if(!PF){ $("#pf-mio").innerHTML=`<div class="sub">Cargando…</div>`; cargarPerfiles(); return; }
+  const yo=PF.perfiles.find(p=>p.email.toLowerCase()===PF.yo)||{email:PF.yo};
+  if(!document.activeElement?.closest?.("#pf-mio")){
+    $("#pf-mio").innerHTML = `<div class="pf-edit">${fotoDe(yo,true)}
+      <div class="pf-campos"><h2>Mi perfil</h2>
+        <div class="two"><input type="text" id="pf-nombre" placeholder="Nombre" value="${esc(yo.nombre||"")}" aria-label="Nombre">
+        <input type="text" id="pf-apellido" placeholder="Apellido" value="${esc(yo.apellido||"")}" aria-label="Apellido"></div>
+        <div class="acts"><label class="btn sm">Cambiar foto<input type="file" id="pf-file" accept="image/*" hidden></label>
+        <button class="btn sm pri" id="pf-guardar">Guardar</button><span class="sub" id="pf-msg"></span></div>
+      </div></div>`;
+  }
+  $("#pf-titulo").hidden = !PF.admin;
+  $("#pf-grid").innerHTML = (PF.admin ? PF.perfiles : [yo]).map(tarjetaPerfil).join("");
+}
+// achica la foto a 160x160 (recorte cuadrado) para guardarla liviana
+function achicarFoto(file){
+  return new Promise((ok,mal)=>{ const img=new Image(); img.onload=()=>{ const t=160, c=document.createElement("canvas"); c.width=c.height=t;
+    const m=Math.min(img.width,img.height); c.getContext("2d").drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,t,t);
+    ok(c.toDataURL("image/webp",0.85)); URL.revokeObjectURL(img.src); }; img.onerror=mal; img.src=URL.createObjectURL(file); });
+}
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="pf-file" || !e.target.files[0]) return;
+  $("#pf-msg").textContent="Subiendo foto…";
+  try{ const foto=await achicarFoto(e.target.files[0]); const r=await equipo({accion:"mi_perfil", foto});
+    $("#pf-msg").textContent = r.error || "Foto guardada ✓"; if(!r.error){ PF=null; cargarPerfiles(); } }
+  catch{ $("#pf-msg").textContent="No se pudo leer esa imagen."; }
+});
+document.addEventListener("click", async e=>{
+  if(e.target.id!=="pf-guardar") return;
+  $("#pf-msg").textContent="Guardando…";
+  const r=await equipo({accion:"mi_perfil", nombre:$("#pf-nombre").value, apellido:$("#pf-apellido").value});
+  $("#pf-msg").textContent = r.error || "Guardado ✓"; if(!r.error){ document.activeElement?.blur(); PF=null; cargarPerfiles(); }
+});
+
 /* Equipo: llama a la función "equipo" de Supabase (crea y borra usuarios con la clave secreta, del lado del servidor) */
 let SB=null, EQ=null, EQDEL=null;
 async function equipo(body){
@@ -956,17 +1049,21 @@ function dbStore(db){
   };
 }
 
+// YO: mail de quien está usando la app (versión web); queda anotado en "por" de cada DJ
+let YO=null;
+function anotar(n, campo){ if(YO){ n.por={...(n.por||{})}; if(!n.por[campo]) n.por[campo]=YO; } }
 function setEstado(L, est, extra={}){
   const n={...L, ...extra, estado:est, upd:hoy()};
-  const f=EST_FECHA[est]; if(f && !n[f]) n[f]=hoy();
-  if(est==="respondio"){ n.resp=hoy(); n.ya=false; }
-  if(est==="enviado" && !n.dm) n.dm=hoy();
+  const f=EST_FECHA[est]; if(f && !n[f]){ n[f]=hoy(); anotar(n, f); }
+  if(est==="respondio"){ n.resp=hoy(); n.ya=false; anotar(n, "resp"); }
+  if(est==="enviado" && !n.dm){ n.dm=hoy(); anotar(n, "dm"); }
   return store.put(n);
 }
 function marcarSeg(L, k){
   const seg={...(L.seg||{}), [k]:hoy()};
   const extra = k==="d10" ? {estado:"no", nota10:true} : {};
-  return store.put({...L, seg, ...extra, upd:hoy()});
+  const n={...L, seg, ...extra, upd:hoy()}; anotar(n, "seg_"+k);
+  return store.put(n);
 }
 
 /* Qué le toca a cada DJ hoy */
@@ -1028,6 +1125,7 @@ function render(){
   if(TAB==="cargar") renderCargarSide();
   if(TAB==="leads") renderLeads();
   if(TAB==="reporte") renderReporte();
+  if(TAB==="perfiles") renderPerfiles();
   if(DRAWER) refreshDrawerStates();
 }
 
@@ -1039,7 +1137,7 @@ function pageHead(){
   const H={hoy:[`Hoy, ${DIAS_SEM[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`,"Lo que toca hacer, en orden"],
     respuestas:["Revisar","Quién respondió y quién no"],
     cargar:["Cargar DJs","Escribí el @ y apretá Enter"], leads:["Todos los DJs",`${n} cargados`],
-    mensajes:["Mensajes","Tocá una opción o pegá lo que te respondieron"], reporte:["Reporte","Se arma solo con lo que marcaste"]}[TAB];
+    mensajes:["Mensajes","Tocá una opción o pegá lo que te respondieron"], perfiles:["Perfiles","Quién hizo qué"], reporte:["Reporte","Se arma solo con lo que marcaste"]}[TAB];
   $("#pg-title").textContent=H[0]; $("#pg-sub").textContent=H[1];
 }
 
@@ -1172,7 +1270,7 @@ function initCargar(){
     F.fuente=$("#a-fuente").value.trim();
     try{ localStorage.setItem("cs-form", JSON.stringify(F)); }catch{}
     const L={id, user:u, pais:F.pais, bio:F.bio, fuente:F.fuente, nombre:$("#a-nombre").value.trim(), lugar:$("#a-lugar").value.trim(),
-      seguidores:$("#a-seg").value.trim(), notas:$("#a-notas").value.trim(), top:$("#a-top").checked, estado:"nuevo", cargado:hoy(), upd:hoy()};
+      seguidores:$("#a-seg").value.trim(), notas:$("#a-notas").value.trim(), top:$("#a-top").checked, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}}:{})};
     ["#a-user","#a-nombre","#a-lugar","#a-seg","#a-notas"].forEach(s=>$(s).value=""); $("#a-top").checked=false; $("#a-dup").innerHTML="";
     $("#a-user").focus();
     await store.put(L); toast(`@${u} cargado`);
@@ -1291,7 +1389,7 @@ function guardarCharla(){
   if(!msgs.length && !nombre) return;
   if(!CUR) CUR="c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const prev=CHARLAS[CUR]||{};
-  store.putCharla({id:CUR, nombre, lugar, tono:MT, msgs, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
+  store.putCharla({id:CUR, nombre, lugar, tono:MT, msgs, por:prev.por||YO||null, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
 }
 function abrirCharla(id){
   const C=CHARLAS[id]; if(!C) return;
@@ -1493,7 +1591,7 @@ $("#tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape" && DRAWER) return closeDrawer();
   if(e.target.matches("input,textarea,select") || e.ctrlKey || e.metaKey || e.altKey) return;
-  const t=["hoy","respuestas","cargar","leads","mensajes","reporte"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
+  const t=["hoy","respuestas","cargar","leads","mensajes","perfiles","reporte"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
 });
 
 /* ---------- arranque ---------- */
@@ -1503,9 +1601,11 @@ document.addEventListener("keydown", e=>{
     const sb = window.supabase.createClient(PLAYSKIT_SUPABASE.url, PLAYSKIT_SUPABASE.key);
     SB = sb;
     const ses = await webLogin(sb);
+    YO = (ses.user?.email||"").toLowerCase() || null;
     const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
     if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
     store = supaStore(sb);
+    $("#tab-perfiles").hidden=false;
     $("#logout").hidden=false; $("#cambiar-clave").hidden=false;
     $("#cambiar-clave").onclick=()=>{ $("#clave").hidden=false; $("#clave-msg").textContent=""; $("#clave-1").focus(); };
     $("#clave-x").onclick=()=>{ $("#clave").hidden=true; $("#clave-1").value=""; $("#clave-2").value=""; };
@@ -1526,7 +1626,7 @@ document.addEventListener("keydown", e=>{
   try{ SAMPLE = window.claude?.use ? await window.claude.use("sample") : null; }catch{ SAMPLE=null; }
   if(TAB==="mensajes") renderChat();
   let t="hoy"; try{ t=localStorage.getItem("cs-tab")||"hoy"; }catch{}
-  setTab(["hoy","respuestas","cargar","leads","mensajes","reporte"].includes(t)?t:"hoy");
+  setTab(["hoy","respuestas","cargar","leads","mensajes","perfiles","reporte"].includes(t)?t:"hoy");
 })();
 </script>
 

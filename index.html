@@ -464,6 +464,13 @@ select option{background:var(--surface);color:var(--ink)}
 .logo .pk{width:120px}
 .login-card img{width:230px}
 .pie-acts{display:flex;gap:2px;flex-wrap:wrap}
+/* pie del menú: botones en columna y menú con scroll si la pantalla es baja, así nada queda cortado */
+@media (min-width:821px){
+  .side{overflow-y:auto;gap:18px}
+  .side-foot{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;padding-bottom:4px}
+  .side-foot .pie-acts{flex-direction:column;gap:4px}
+  .side-foot .pie-acts .btn{width:100%;justify-content:center}
+}
 
 /* Perfiles */
 .pf-mio{margin-bottom:8px;max-width:760px}

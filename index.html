@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="icon" href="playskit-estrella-oscuro.webp">
 <style>html,body{margin:0}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+
 <title>Playskit Setter</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -484,6 +485,32 @@ select option{background:var(--surface);color:var(--ink)}
 .pf-nums span{font-size:11.5px;color:var(--muted)}
 .pf-nums div:nth-child(-n+3){border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
 .pf-nums div:nth-child(-n+3) b{font-size:24px;color:var(--accent)}
+
+/* Contenido: días en vertical, tarjetas de cada día en horizontal */
+#ct-sem{margin-bottom:6px}
+.ct-prog{margin:4px 0 16px}
+.ct-dia{display:grid;grid-template-columns:130px minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
+.ct-dn{display:flex;flex-direction:column;gap:3px;padding-top:12px}
+.ct-dn b{font-size:17px;font-weight:600}
+.ct-dn span{font-size:12.5px;color:var(--muted)}
+.ct-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.ct-card{flex:0 0 300px;scroll-snap-align:start;display:flex;flex-direction:column;gap:7px;padding:14px;border-radius:var(--r);background:var(--glass) !important;border:1px solid var(--glass-brd) !important}
+.ct-card.ok{opacity:.55}
+.ct-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ct-f{font:500 11.5px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:2px 9px}
+.ct-c{font-size:12px;color:var(--muted)}
+.ct-card b{font-weight:600;font-size:15px;line-height:1.3}
+.ct-h{font-size:14px;color:var(--ink);font-style:italic}
+.ct-cta{font-size:12.5px;color:var(--muted)}
+.ct-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.ct-ob{font-size:12px;font-weight:600;color:var(--ok)}
+.ct-ok{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer}
+.ct-ok input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.ct-ip{margin-top:14px}
+.ct-ip h3{font-size:14px;font-weight:600;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ct-idea{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--glass-brd);font-size:14.5px}
+.ct-idea em{margin-left:auto;font-size:12px;color:var(--muted);font-style:normal;white-space:nowrap}
+@media (max-width:700px){.ct-dia{grid-template-columns:minmax(0,1fr);gap:4px}.ct-dn{flex-direction:row;align-items:baseline;gap:10px;padding-top:6px}.ct-card{flex-basis:84%}}
 </style>
 
 <div class="login" id="login" hidden>
@@ -518,9 +545,10 @@ select option{background:var(--surface);color:var(--ink)}
     <button data-tab="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M1.5 21c0-4 3.4-7 7.5-7s7.5 3 7.5 7"/><path d="M16 4a4 4 0 0 1 0 8M22.5 21c0-3-1.8-5.4-4.5-6.5"/></svg><span>Todos</span><em class="badge soft" id="b-leads"></em></button>
     <button data-tab="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg><span>Mensajes</span></button>
     <button data-tab="reporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Reporte</span></button>
+    <button data-tab="contenido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Contenido</span></button>
     <button data-tab="perfiles" id="tab-perfiles" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Usuarios</span></button>
   </nav>
-  <div class="side-foot">Atajos: teclas 1 a 7 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
+  <div class="side-foot">Atajos: teclas 1 a 8 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
 </div>
 <div class="page">
   <div class="topbar">
@@ -642,6 +670,12 @@ select option{background:var(--surface);color:var(--ink)}
   </section>
 
   <!-- PERFILES (versión web) -->
+  <section id="v-contenido" hidden>
+    <div class="chips" id="ct-sem"></div>
+    <div class="sub ct-prog" id="ct-prog"></div>
+    <div id="ct-cal"></div>
+    <details class="more" id="ct-ideas"><summary>Banco de ideas (20)</summary><div id="ct-ideas-b"></div></details>
+  </section>
   <section id="v-perfiles" hidden>
     <div class="card pf-mio" id="pf-mio"></div>
     <h2 class="h2s" id="pf-titulo">Todos los usuarios</h2>
@@ -1128,6 +1162,7 @@ function render(){
   if(TAB==="leads") renderLeads();
   if(TAB==="reporte") renderReporte();
   if(TAB==="perfiles") renderPerfiles();
+  if(TAB==="contenido") renderContenido();
   if(DRAWER) refreshDrawerStates();
 }
 
@@ -1139,7 +1174,7 @@ function pageHead(){
   const H={hoy:[`Hoy, ${DIAS_SEM[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`,"Lo que toca hacer, en orden"],
     respuestas:["Revisar","Quién respondió y quién no"],
     cargar:["Cargar DJs","Escribí el @ y apretá Enter"], leads:["Todos los DJs",`${n} cargados`],
-    mensajes:["Mensajes","Tocá una opción o pegá lo que te respondieron"], perfiles:["Usuarios","Leads, mensajes y ventas de cada uno"], reporte:["Reporte","Se arma solo con lo que marcaste"]}[TAB];
+    mensajes:["Mensajes","Tocá una opción o pegá lo que te respondieron"], perfiles:["Usuarios","Leads, mensajes y ventas de cada uno"], reporte:["Reporte","Se arma solo con lo que marcaste"], contenido:["Contenido","Qué subir cada día y dónde"]}[TAB];
   $("#pg-title").textContent=H[0]; $("#pg-sub").textContent=H[1];
 }
 
@@ -1580,6 +1615,111 @@ $("#drawer").addEventListener("click", async e=>{
   if(b.hasAttribute("data-del2")){ await store.del(L.id); closeDrawer(); toast("Borrado"); }
 });
 
+/* ---------- contenido: calendario de la semana + banco de ideas ---------- */
+const CT_DIAS=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+const CT_SEM=[
+  {foco:"Dolor", sub:"Por qué no te contratan"},
+  {foco:"Prueba", sub:"Casos y antes/después"},
+  {foco:"Proceso", sub:"Cómo trabajamos"},
+  {foco:"Objeciones", sub:"Es caro, lo hago yo, lo pienso"}
+];
+const R_="IG · TikTok", C_="IG", H_="IG historias";
+const CT=[
+ [ /* semana 1: dolor */
+  [{f:"Reel",c:R_,t:"Lo primero que mira un booker en tu link",h:"Lo primero que mira un booker cuando le escribís",cta:"Comentá PRESSKIT y te mando la checklist",ob:"Crecer"}],
+  [{f:"Carrusel",c:C_,t:"5 errores que hacen que un booker no te conteste",h:"3 errores que hacen que tu presskit no te consiga fechas",cta:"Guardalo y comentá PRESSKIT",ob:"Crecer"}],
+  [{f:"Reel",c:R_,t:"Antes y después: del Linktree a esto",h:"Este DJ pasó de un Linktree a esto 👇",cta:"Comentá WEB y te mostramos cómo",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Encuesta: ¿tenés presskit? Sí / No",h:"¿Tenés presskit? Sí / No",cta:"A los que votan No, escribirles ese día",ob:"Conversaciones"},
+   {f:"Historias",c:H_,t:"Secuencia de venta (7 historias)",h:"Muchos DJs nos preguntan qué hacemos 👇",cta:"Respondé WEB",ob:"Vender"}],
+  [{f:"Reel",c:R_,t:"Somos 3 y hacemos webs para DJs",h:"Somos 3 y armamos webs para DJs",cta:"Seguinos para ver cómo las armamos",ob:"Confianza"}],
+  [{f:"Carrusel",c:C_,t:"Cómo trabajamos en 3 pasos",h:"Tu web, lista en 48 h: así trabajamos",cta:"Escribinos PRESSKIT",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Cabina y vida de DJ",h:"Detrás de cabina",cta:"Caja de preguntas: ¿qué le pedirías a tu presskit?",ob:"Humanizar"}]
+ ],
+ [ /* semana 2: prueba */
+  [{f:"Reel",c:R_,t:"POV: le mandás tu presskit a un boliche",h:"POV: te piden tu presskit y mandás esto",cta:"Comentá PRESSKIT",ob:"Crecer"}],
+  [{f:"Carrusel",c:C_,t:"Checklist del presskit en 10 segundos",h:"Tu presskit en 10 segundos: ¿cuántos puntos cumplís?",cta:"Comentá PRESSKIT y te mandamos la checklist",ob:"Crecer"}],
+  [{f:"Reel",c:R_,t:"Antes y después: Drive vs web",h:"Así se ve un presskit en Drive vs en una web",cta:"Comentá WEB",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Caso Lucas Ramos: la web paso a paso",h:"Así quedó la web de Lucas",cta:"Respondé WEB y te mostramos la tuya",ob:"Vender"}],
+  [{f:"Reel",c:R_,t:"Testimonio de Lucas (15 segundos)",h:"Lucas cuenta cómo le cambió mandar un solo link",cta:"Escribinos PRESSKIT",ob:"Confianza"}],
+  [{f:"Carrusel",c:C_,t:"Cómo armamos la web de Lucas en 48 h",h:"De cero a web publicada en 48 h",cta:"Escribinos PRESSKIT",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Caja de preguntas: ¿cuánto tarda? ¿cómo se paga?",h:"Preguntanos lo que quieras sobre tu web",cta:"Responder todo el mismo día",ob:"Conversaciones"}]
+ ],
+ [ /* semana 3: proceso */
+  [{f:"Reel",c:R_,t:"Timelapse: armando una web de DJ",h:"Mirá cómo armamos una web de DJ en 1 minuto",cta:"Comentá WEB",ob:"Crecer"}],
+  [{f:"Carrusel",c:C_,t:"Professional vs Premium: cuál te conviene",h:"¿Professional o Premium? Te lo explicamos en 6 slides",cta:"Escribinos PRESSKIT",ob:"Vender"}],
+  [{f:"Reel",c:R_,t:"Plantilla gratis vs web a medida",h:"La plantilla gratis te hace ver igual que todos",cta:"Comentá WEB",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Detrás de escena: armando una prueba",h:"Hoy armamos la prueba de un DJ",cta:"Respondé WEB",ob:"Confianza"}],
+  [{f:"Reel",c:R_,t:"Mini tutorial: cómo grabar un set para tu presskit",h:"Cómo grabar un set que un booker quiera escuchar",cta:"Seguinos para más",ob:"Crecer"}],
+  [{f:"Carrusel",c:C_,t:"Qué incluye tu web (bio, sets, fotos, rider, contacto)",h:"Todo lo que va dentro de tu web presskit",cta:"Escribinos PRESSKIT",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"El set de Renata",h:"Domingo de cabina",cta:"Caja de preguntas sobre sets",ob:"Humanizar"}]
+ ],
+ [ /* semana 4: objeciones */
+  [{f:"Reel",c:R_,t:"Falso comentario: «Con Canva lo hago yo»",h:"Me dijeron: «con Canva lo hago yo»",cta:"Comentá WEB",ob:"Vender"}],
+  [{f:"Carrusel",c:C_,t:"Presskit en PDF vs en web: cuál prefiere un booker",h:"PDF o web: qué abre primero un booker",cta:"Guardalo y comentá PRESSKIT",ob:"Crecer"}],
+  [{f:"Reel",c:R_,t:"¿Es caro? Una fecha y se paga sola",h:"¿Cuánto vale una fecha que perdés por no tener presskit?",cta:"Escribinos PRESSKIT",ob:"Vender"}],
+  [{f:"Historias",c:H_,t:"Preguntas frecuentes: tiempo, pago y la prueba",h:"Lo que más nos preguntan antes de empezar",cta:"Respondé WEB",ob:"Vender"}],
+  [{f:"Reel",c:R_,t:"Analicé el presskit de un DJ famoso",h:"Analicé el presskit de [DJ famoso] y esto copiaría",cta:"Seguinos para más análisis",ob:"Crecer"}],
+  [{f:"Carrusel",c:C_,t:"Errores del rider técnico",h:"4 errores que ves en un rider y hacen dudar a la producción",cta:"Escribinos PRESSKIT",ob:"Crecer"}],
+  [{f:"Historias",c:H_,t:"Balance del mes y pedido de testimonios",h:"Lo que hicimos este mes",cta:"Pedirles el video de 15 segundos a los clientes",ob:"Confianza"}]
+ ]
+];
+const CT_IDEAS=[
+  {p:"Crecer",f:"Carrusel",t:"¿Cómo hacer un press kit para DJ? (educativo)",o:"IG"},
+  {p:"Crecer",f:"Carrusel",t:"Checklist: qué tiene que tener tu presskit",o:"IG"},
+  {p:"Crecer",f:"Reel",t:"3 errores que hacen que un booker no te conteste",o:"Web"},
+  {p:"Crecer",f:"Reel",t:"Lo primero que mira un booker en tu link",o:"Web"},
+  {p:"Crecer",f:"Reel",t:"Analicé el presskit de un DJ famoso (método portavoz)",o:"Curso"},
+  {p:"Crecer",f:"Carrusel",t:"PDF vs web: qué prefiere un booker",o:"Web"},
+  {p:"Crecer",f:"Reel",t:"Mini tutorial: cómo grabar un set para tu presskit",o:"Web"},
+  {p:"Crecer",f:"Carrusel",t:"Errores del rider técnico",o:"Propia"},
+  {p:"Vender",f:"Reel",t:"Antes y después: Linktree o Drive vs web",o:"Web"},
+  {p:"Vender",f:"Carrusel",t:"Caso de éxito: la web de Lucas paso a paso",o:"Curso"},
+  {p:"Vender",f:"Reel",t:"Falso comentario de hater: «con Canva lo hago yo»",o:"Curso"},
+  {p:"Vender",f:"Reel",t:"Timelapse armando una web de DJ",o:"Web"},
+  {p:"Vender",f:"Carrusel",t:"Professional vs Premium",o:"Propia"},
+  {p:"Vender",f:"Historias",t:"Caja de preguntas: tiempo, pago y la prueba",o:"Curso"},
+  {p:"Vender",f:"Carrusel",t:"Póster estilo «Presskit 2026» con las fotos de prensa de un DJ",o:"IG"},
+  {p:"Confianza",f:"Reel",t:"Somos 3 y hacemos webs para DJs",o:"Propia"},
+  {p:"Confianza",f:"Reel",t:"Testimonio en video de un cliente (15 segundos)",o:"Curso"},
+  {p:"Confianza",f:"Historias",t:"Encuesta: ¿tenés presskit? Sí / No",o:"Curso"},
+  {p:"Confianza",f:"Historias",t:"Detrás de escena: armando una prueba",o:"Web"},
+  {p:"Confianza",f:"Carrusel",t:"Sesión de fotos de prensa para DJ: cómo se ve una buena foto",o:"IG"}
+];
+const CT_ORIG={IG:"Visto en Instagram",Web:"Buenas prácticas de EPK",Curso:"De los cursos",Propia:"Idea propia"};
+function ctGet(k){ try{ return localStorage.getItem("ps-ct-"+k)==="1"; }catch{ return false; } }
+function ctSet(k,v){ try{ localStorage.setItem("ps-ct-"+k, v?"1":"0"); }catch{} }
+let CT_W=0; try{ CT_W=Math.max(0,Math.min(3,+localStorage.getItem("ps-ct-w")||0)); }catch{}
+const ctEsc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function renderContenido(){
+  $("#ct-sem").innerHTML=CT_SEM.map((s,i)=>`<button type="button" data-w="${i}" aria-pressed="${i===CT_W}">Semana ${i+1} · ${s.foco}</button>`).join("");
+  const hechas=CT[CT_W].reduce((a,dia,di)=>a+dia.filter((_,ci)=>ctGet(`${CT_W}-${di}-${ci}`)).length,0);
+  const total=CT[CT_W].reduce((a,dia)=>a+dia.length,0);
+  $("#ct-prog").textContent=`${CT_SEM[CT_W].sub} · ${hechas} de ${total} subidas`;
+  $("#ct-cal").innerHTML=CT[CT_W].map((dia,di)=>`
+    <div class="ct-dia">
+      <div class="ct-dn"><b>${CT_DIAS[di]}</b><span>${dia.map(x=>x.f).join(" + ")}</span></div>
+      <div class="ct-row">${dia.map((x,ci)=>{ const k=`${CT_W}-${di}-${ci}`, on=ctGet(k); return `
+        <div class="ct-card${on?" ok":""}">
+          <div class="ct-top"><span class="ct-f">${x.f}</span><span class="ct-c">${x.c}</span></div>
+          <b>${ctEsc(x.t)}</b>
+          <div class="ct-h">«${ctEsc(x.h)}»</div>
+          <div class="ct-cta">${ctEsc(x.cta)}</div>
+          <div class="ct-foot"><span class="ct-ob">${x.ob}</span>
+            <button type="button" class="btn sm ghost" data-copy="${ctEsc(x.h)}">Copiar gancho</button>
+            <label class="ct-ok"><input type="checkbox" data-k="${k}"${on?" checked":""}> Subido</label></div>
+        </div>`; }).join("")}</div>
+    </div>`).join("");
+  $("#ct-ideas-b").innerHTML=["Crecer","Vender","Confianza"].map(p=>`
+    <div class="ct-ip"><h3>${p}</h3>${CT_IDEAS.filter(x=>x.p===p).map(x=>`<div class="ct-idea"><span class="ct-f">${x.f}</span><span>${ctEsc(x.t)}</span><em>${CT_ORIG[x.o]}</em></div>`).join("")}</div>`).join("");
+}
+$("#v-contenido").addEventListener("click",async e=>{
+  const w=e.target.closest("[data-w]"); if(w){ CT_W=+w.dataset.w; try{ localStorage.setItem("ps-ct-w",String(CT_W)); }catch{} renderContenido(); return; }
+  const c=e.target.closest("[data-copy]"); if(c){ try{ await navigator.clipboard.writeText(c.dataset.copy); toast("Gancho copiado"); }catch{ toast("No se pudo copiar"); } return; }
+});
+$("#v-contenido").addEventListener("change",e=>{
+  const k=e.target.dataset?.k; if(!k) return; ctSet(k,e.target.checked); renderContenido();
+});
+
 /* ---------- pestañas y atajos ---------- */
 function setTab(t){
   TAB=t; document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
@@ -1593,7 +1733,7 @@ $("#tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape" && DRAWER) return closeDrawer();
   if(e.target.matches("input,textarea,select") || e.ctrlKey || e.metaKey || e.altKey) return;
-  const t=["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
+  const t=["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles","contenido"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
 });
 
 /* ---------- arranque ---------- */
@@ -1631,5 +1771,6 @@ document.addEventListener("keydown", e=>{
   setTab(["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles"].includes(t)?t:"hoy");
 })();
 </script>
+
 
 </html>

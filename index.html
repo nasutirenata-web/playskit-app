@@ -518,10 +518,21 @@ select option{background:var(--surface);color:var(--ink)}
     <img alt="Playskit" width="530" height="321">
     <div class="sub" id="lg-sub">Panel de Playskit</div>
     <input type="email" id="lg-mail" placeholder="Tu mail" autocomplete="username" required aria-label="Mail">
+    <input type="text" id="lg-palabra" placeholder="Tu palabra secreta de música" autocomplete="off" aria-label="Palabra secreta" hidden>
     <input type="password" id="lg-pass" placeholder="Contraseña" autocomplete="current-password" required minlength="8" aria-label="Contraseña">
     <button class="btn pri" type="submit" id="lg-btn">Entrar</button>
     <div class="sub" id="lg-err" aria-live="polite"></div>
+    <button class="lg-swap" type="button" id="lg-olvide">¿Olvidaste tu contraseña?</button>
     <button class="lg-swap" type="button" id="lg-swap">¿Primera vez? Crear mi cuenta</button>
+  </form>
+</div>
+<div class="login" id="palabra" hidden>
+  <form class="login-card" id="palabra-f" autocomplete="off">
+    <h1>Tu palabra secreta</h1>
+    <div class="sub">Elegí una palabra de música (ej: vinilo, bombo, consola). Si te olvidás la contraseña, la usás para cambiarla sin pedirle nada a nadie.</div>
+    <input type="text" id="palabra-1" placeholder="Palabra de música" minlength="3" required aria-label="Palabra secreta">
+    <button class="btn pri" type="submit">Guardar</button>
+    <div class="sub" id="palabra-msg" aria-live="polite"></div>
   </form>
 </div>
 <div class="login" id="clave" hidden>
@@ -690,9 +701,12 @@ select option{background:var(--surface);color:var(--ink)}
     <h2 class="h2s">¿Cómo vamos? <span class="sub">últimos 7 días</span></h2>
     <div class="checks" id="r-rates"></div>
 
+    <section id="pago">
     <h2 class="h2s">Pago a la setter <span class="sub" id="p-sem"></span></h2>
     <div class="paybig"><span class="mono" id="p-total"></span><button class="btn sm" id="p-copy">Copiar</button></div>
     <div class="sub" id="p-desglose"></div>
+    <div id="p-setters"></div>
+    </section>
 
     <section class="eq" id="eq" hidden>
       <h2 class="h2s">Equipo</h2>
@@ -707,7 +721,7 @@ select option{background:var(--surface);color:var(--ink)}
       </div>
     </section>
 
-    <details class="more">
+    <details class="more" id="ajustes">
       <summary>Cambiar montos y ajustes</summary>
       <div class="three">
         <div class="field"><label for="c-fijo">Fijo semanal US$</label><input type="text" id="c-fijo" inputmode="decimal" placeholder="0"></div>
@@ -898,27 +912,44 @@ function webLogin(sb){
     $("#login img").src = logoEntrada();
     $("#login").hidden=false; $("#lg-mail").focus();
     return new Promise(res=>{
-      let crear=false;
-      const modo=()=>{ $("#lg-btn").textContent = crear?"Crear mi cuenta":"Entrar";
-        $("#lg-swap").textContent = crear?"Ya tengo cuenta: entrar":"¿Primera vez? Crear mi cuenta";
-        $("#lg-pass").placeholder = crear?"Elegí una contraseña (8 o más)":"Contraseña";
-        $("#lg-pass").autocomplete = crear?"new-password":"current-password"; $("#lg-err").textContent=""; };
-      $("#lg-swap").onclick=()=>{ crear=!crear; modo(); $("#lg-mail").focus(); };
+      let modoAct="entrar";   // entrar | crear | olvide
+      const modo=m=>{ modoAct=m; const crear=m==="crear", olv=m==="olvide";
+        $("#lg-btn").textContent = crear?"Crear mi cuenta":olv?"Cambiar contraseña":"Entrar";
+        $("#lg-swap").textContent = m==="entrar"?"¿Primera vez? Crear mi cuenta":"Ya tengo cuenta: entrar";
+        $("#lg-olvide").hidden = olv;
+        $("#lg-palabra").hidden = !olv; $("#lg-palabra").required = olv;
+        $("#lg-pass").placeholder = crear||olv?"Elegí una contraseña nueva (8 o más)":"Contraseña";
+        $("#lg-pass").autocomplete = crear||olv?"new-password":"current-password"; $("#lg-err").textContent=""; };
+      $("#lg-swap").onclick=()=>{ modo(modoAct==="entrar"?"crear":"entrar"); $("#lg-mail").focus(); };
+      $("#lg-olvide").onclick=()=>{ modo("olvide"); ($("#lg-mail").value?$("#lg-palabra"):$("#lg-mail")).focus(); };
       $("#login-f").onsubmit = async e=>{
         e.preventDefault();
         const email=$("#lg-mail").value.trim(), password=$("#lg-pass").value;
-        if(crear){
-          $("#lg-err").textContent="Creando tu cuenta…";
-          const r = await equipo({accion:"registrarse", email, password});
+        if(modoAct!=="entrar"){
+          $("#lg-err").textContent = modoAct==="crear"?"Creando tu cuenta…":"Cambiando la contraseña…";
+          const r = modoAct==="crear" ? await equipo({accion:"registrarse", email, password})
+                                      : await equipo({accion:"recuperar", email, password, palabra:$("#lg-palabra").value});
           if(r.error){ $("#lg-err").textContent=r.error; return; }
         }
         $("#lg-err").textContent="Entrando…";
         const {data:d, error} = await sb.auth.signInWithPassword({email, password});
-        if(error){ $("#lg-err").textContent="Mail o contraseña incorrectos. Si te la olvidaste, pedile a Renata que la resetee desde Equipo."; return; }
+        if(error){ $("#lg-err").textContent="Mail o contraseña incorrectos. Si te la olvidaste, tocá “¿Olvidaste tu contraseña?”."; return; }
         $("#lg-pass").value=""; $("#login").hidden=true; res(d.session);
       };
     });
   });
+}
+// Si todavía no eligió palabra secreta, se la pide una vez (sirve para "¿Olvidaste tu contraseña?")
+async function pedirPalabra(){
+  const r = await equipo({accion:"tengo_palabra"});
+  if(r.error || r.tiene) return;
+  $("#palabra").hidden=false; $("#palabra-1").focus();
+  $("#palabra-f").onsubmit = async e=>{
+    e.preventDefault(); $("#palabra-msg").textContent="Guardando…";
+    const g = await equipo({accion:"palabra", palabra:$("#palabra-1").value});
+    if(g.error){ $("#palabra-msg").textContent=g.error; return; }
+    $("#palabra-1").value=""; $("#palabra").hidden=true; toast("Palabra secreta guardada");
+  };
 }
 // Mail que entró pero Renata todavía no aprobó: no ve datos
 function esperarAprobacion(sb, email){
@@ -1006,6 +1037,7 @@ async function cargarEquipo(){
   const r = await equipo({accion:"listar"});
   if(r.error){ $("#eq").hidden=true; return; }   // no es admin: no ve la sección
   EQ = r.equipo; $("#eq").hidden=false; pintarEquipo();
+  if(TAB==="reporte") renderPago($("#r-dia").value||hoy());
 }
 function pintarEquipo(){
   $("#eq-list").innerHTML = (EQ||[]).map(p=>`<div class="eq-row"><span class="av" style="--c:${p.rol==="admin"?"#3fd8e2":"#64748b"}">${esc((p.nombre||p.email)[0].toUpperCase())}</span>
@@ -1497,22 +1529,42 @@ function renderReporte(){
 }
 
 /* Pago: fijo si cumplió la semana + por cada interesado con WhatsApp + % de cada venta */
-let PAGO_TXT="";
-function renderPago(dia){
-  const dw=(new Date(dia+"T12:00").getDay()+6)%7, ini=sumar(dia,-dw), fin=sumar(ini,6);
-  const en=f=>Object.values(LEADS).filter(L=>L[f] && L[f]>=ini && L[f]<=fin);
+let PAGO_TXT="", ADMIN=false;
+const usd=n=>"US$"+(Math.round(n*100)/100).toLocaleString("es-AR");
+function calcPago(leads, ini, fin){
+  const en=f=>leads.filter(L=>L[f] && L[f]>=ini && L[f]<=fin);
   const dms=en("dm").length, metaSem=(+CFG.meta||15)*5, cumplida=dms>=metaSem;
   const inter=en("quiere").filter(L=>L.wsp), ventas=en("cerrado");
   const facturado=ventas.reduce((a,L)=>a+(L.plan==="Premium"?150:80),0);
   const fijo=cumplida?(+CFG.fijo||0):0, pInt=inter.length*(+CFG.porInt||0), com=facturado*(+CFG.com||0)/100;
-  const total=fijo+pInt+com;
-  const usd=n=>"US$"+(Math.round(n*100)/100).toLocaleString("es-AR");
-  const pct = ventas.length ? Math.round(total/facturado*100) : null;
+  const total=fijo+pInt+com, pct = ventas.length ? Math.round(total/facturado*100) : null;
+  const txt=`Fijo ${usd(fijo)}${cumplida?"":` (lleva ${dms} de ${metaSem} mensajes)`} · ${inter.length} interesados ${usd(pInt)} · ${ventas.length} ventas ${usd(com)} (vendió ${usd(facturado)})`;
+  return {total, txt, pct, inter, ventas, fijo, pInt, com, facturado};
+}
+const avisoPct=p=>p.pct>25?`<div class="warnbox" style="margin-top:8px">⚠️ Le pagás el ${p.pct}% de lo vendido. Máximo 25%.</div>`:"";
+function renderPago(dia){
+  // versión web: el pago y los montos los ve solo la admin
+  $("#pago").hidden = $("#ajustes").hidden = !!SB && !ADMIN;
+  if(SB && !ADMIN) return;
+  const dw=(new Date(dia+"T12:00").getDay()+6)%7, ini=sumar(dia,-dw), fin=sumar(ini,6);
   $("#p-sem").textContent=`${corta(ini)} al ${corta(fin)}`;
+  const todos=Object.values(LEADS);
+  if(!SB){
+    const p=calcPago(todos, ini, fin);
+    $("#p-total").textContent=usd(p.total); $("#p-desglose").innerHTML=p.txt+avisoPct(p); $("#p-setters").innerHTML="";
+    PAGO_TXT=`💰 Pago ${corta(ini)} al ${corta(fin)}: ${usd(p.total)}\nFijo: ${usd(p.fijo)}\nInteresados: ${p.inter.length} = ${usd(p.pInt)}\nVentas: ${p.ventas.length} = ${usd(p.com)}`;
+    return;
+  }
+  // una fila por setter: los DJs son de quien los cargó (dueno)
+  const de=L=>(L.dueno||L.por?.cargado||"").toLowerCase();
+  const mails=[...new Set([...(EQ||[]).filter(p=>p.rol!=="admin").map(p=>p.email.toLowerCase()), ...todos.map(de).filter(m=>m && m!==YO)])];
+  const nom=m=>(EQ||[]).find(p=>p.email.toLowerCase()===m)?.nombre||m.split("@")[0];
+  const filas=mails.map(m=>({m, p:calcPago(todos.filter(L=>de(L)===m), ini, fin)}));
+  const total=filas.reduce((a,f)=>a+f.p.total,0);
   $("#p-total").textContent=usd(total);
-  $("#p-desglose").innerHTML = `Fijo ${usd(fijo)}${cumplida?"":` (lleva ${dms} de ${metaSem} mensajes)`} · ${inter.length} interesados ${usd(pInt)} · ${ventas.length} ventas ${usd(com)}`
-    + (pct>25?`<div class="warnbox" style="margin-top:8px">⚠️ Le pagás el ${pct}% de lo vendido. Máximo 25%.</div>`:"");
-  PAGO_TXT=`💰 Pago ${corta(ini)} al ${corta(fin)}: ${usd(total)}\nFijo: ${usd(fijo)}\nInteresados: ${inter.length} = ${usd(pInt)}\nVentas: ${ventas.length} = ${usd(com)}`;
+  $("#p-desglose").textContent="Total a pagar entre todos";
+  $("#p-setters").innerHTML=filas.map(({m,p})=>`<div class="card" style="margin-top:10px"><div class="paybig"><b>${esc(nom(m))}</b><span class="mono">${usd(p.total)}</span></div><div class="sub">${p.txt}</div>${avisoPct(p)}</div>`).join("");
+  PAGO_TXT=`💰 Pago ${corta(ini)} al ${corta(fin)}: ${usd(total)}\n`+filas.map(({m,p})=>`${nom(m)}: ${usd(p.total)} (${p.ventas.length} ventas, vendió ${usd(p.facturado)})`).join("\n");
 }
 $("#p-copy").addEventListener("click", e=>copiar(PAGO_TXT, e.currentTarget));
 $("#c-fijo").addEventListener("change", e=>store.cfg({fijo:+e.target.value.replace(",",".")||0}));
@@ -1749,6 +1801,8 @@ document.addEventListener("keydown", e=>{
     YO = (ses.user?.email||"").toLowerCase() || null;
     const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
     if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
+    ADMIN = yo.rol==="admin";
+    pedirPalabra();
     store = supaStore(sb);
     $("#tab-perfiles").hidden=false;
     $("#logout").hidden=false; $("#cambiar-clave").hidden=false;

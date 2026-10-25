@@ -1037,7 +1037,10 @@ $("#eq-f").addEventListener("submit", async e=>{
 
 function supaStore(sb){
   const busy={};   // una escritura a la vez por fila
-  const write=(k,fn)=>{ const p=(busy[k]||Promise.resolve()).then(async()=>{ const {error}=await fn(); if(error) throw error; }).catch(()=>toast("No se guardó. Revisá la conexión.")); busy[k]=p; return p; };
+  // si el DJ ya es de otra setter, Supabase no deja guardarlo (cada una ve solo lo suyo)
+  const write=(k,fn)=>{ const p=(busy[k]||Promise.resolve()).then(async()=>{ const {error}=await fn(); if(error) throw error; }).catch(e=>{
+    if(/row-level|42501|policy/i.test((e&&(e.message||e.code))||"")){ const [t,id]=k.split(":"); if(t==="leads"){ delete LEADS[id]; render(); } toast("Ese DJ ya lo tiene otra setter."); }
+    else toast("No se guardó. Revisá la conexión."); }); busy[k]=p; return p; };
   const up=(t,id,data)=>write(t+":"+id, ()=>sb.from(t).upsert({id, data, updated_at:new Date().toISOString()}));
   const rm=(t,id)=>write(t+":"+id, ()=>sb.from(t).delete().eq("id",id));
   const aplicar=(t,row,borrado)=>{
@@ -1307,7 +1310,7 @@ function initCargar(){
     F.fuente=$("#a-fuente").value.trim();
     try{ localStorage.setItem("cs-form", JSON.stringify(F)); }catch{}
     const L={id, user:u, pais:F.pais, bio:F.bio, fuente:F.fuente, nombre:$("#a-nombre").value.trim(), lugar:$("#a-lugar").value.trim(),
-      seguidores:$("#a-seg").value.trim(), notas:$("#a-notas").value.trim(), top:$("#a-top").checked, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}}:{})};
+      seguidores:$("#a-seg").value.trim(), notas:$("#a-notas").value.trim(), top:$("#a-top").checked, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     ["#a-user","#a-nombre","#a-lugar","#a-seg","#a-notas"].forEach(s=>$(s).value=""); $("#a-top").checked=false; $("#a-dup").innerHTML="";
     $("#a-user").focus();
     await store.put(L); toast(`@${u} cargado`);
@@ -1426,7 +1429,7 @@ function guardarCharla(){
   if(!msgs.length && !nombre) return;
   if(!CUR) CUR="c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const prev=CHARLAS[CUR]||{};
-  store.putCharla({id:CUR, nombre, lugar, tono:MT, msgs, por:prev.por||YO||null, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
+  store.putCharla({id:CUR, nombre, lugar, tono:MT, msgs, por:prev.por||YO||null, dueno:prev.dueno||YO||null, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
 }
 function abrirCharla(id){
   const C=CHARLAS[id]; if(!C) return;

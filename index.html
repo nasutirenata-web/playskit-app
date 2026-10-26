@@ -1602,7 +1602,7 @@ document.addEventListener("click", e=>{
 });
 
 /* ---------- Cargar ---------- */
-let F = {pais:"MX", bio:"Linktree"};
+let F = {pais:"AR", bio:"Linktree"};
 function chipGroup(el, opts, key){
   el.innerHTML = opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${F[key]===v}">${l}</button>`).join("");
   el.onclick = e=>{ const b=e.target.closest("button"); if(!b) return; F[key]=b.dataset.v; el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); $("#a-user").focus(); };
@@ -1637,11 +1637,12 @@ function initCargar(){
       const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u});
       if(otra){ toast(`Este DJ ya está cargado en la cuenta de ${otra}`, 3500); return; }
     }
-    const sm=raw.match(/([\d][\d.,]*\s?[kKmM]?)\s*(?:seguidores|followers)/i);
+    const sm=raw.match(/(\d[\d.,]*\s?(?:millones|mill|mil|k|m)?)\s*(?:seguidores|followers)/i);
+    const segTxt=s=>s.toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
     const bio=/linktr\.?ee/i.test(raw)?"Linktree":/drive\.google|docs\.google/i.test(raw)?"Drive":null;
     // nombre: el que escribió en la lupa; si no, se arma con el @ (julirossi.dj → Julirossi)
     const nom=$("#lupa-q").value.trim() || (u.split(/[._]+/).find(p=>p && !/^(dj|music|musica|oficial|official|ok)$/.test(p).valueOf() && /[a-z]/.test(p))||u).replace(/\d+/g,"").replace(/^./,c=>c.toUpperCase());
-    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Presskit actual", nombre:nom, lugar:"", seguidores:sm?sm[1].replace(/\s/g,"").toLowerCase():"", notas:"", top:false,
+    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Presskit actual", nombre:nom, lugar:"", seguidores:sm?segTxt(sm[1]):"", notas:"", top:false,
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);

@@ -476,6 +476,9 @@ select option{background:var(--surface);color:var(--ink)}
 :root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
 .nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
 #l-funnel{display:none}
+/* último mensaje enviado y qué respondió: dos líneas finitas dentro de cada tilde */
+.nota-in.tx{width:100%;min-width:150px !important;max-width:230px;margin:6px auto 0;text-align:left;font-size:12.5px;color:var(--muted)}
+.nota-in.tx.resp{color:#0b8fb5}
 .ct-ia{margin-bottom:14px;padding:14px 16px}
 .ct-ia textarea{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--ink);background:#fff}
 .ci-out{margin-top:12px;white-space:pre-wrap;line-height:1.55;font-size:14.5px}
@@ -618,6 +621,50 @@ th.c,td.c{text-align:center}
 :root[data-bg="claro"] h1,:root[data-bg="claro"] .topbar h1{font-weight:700;letter-spacing:-.02em}
 :root[data-bg="claro"] .topbar .sub{color:var(--muted)}
 :root[data-bg="claro"] main{max-width:1280px}
+
+/* ===== Liquid glass (tema claro): fondo con degradé violeta y verde agua, vidrio esmerilado con brillo en el borde ===== */
+:root[data-bg="claro"]{
+  --bg:#eceffc; --glass:rgba(255,255,255,.50); --glass-2:rgba(255,255,255,.66); --glass-brd:rgba(255,255,255,.82); --glass-hi:rgba(255,255,255,.95);
+  --glow1:rgba(124,58,237,.34); --glow2:rgba(20,216,196,.34); --glow3:rgba(236,72,153,.16);
+  --shadow:rgba(60,50,120,.14); --line:rgba(110,100,170,.16); --chip:rgba(255,255,255,.55); --muted:#6f7590; --r:24px;
+  --vidrio:rgba(255,255,255,.50); --brillo:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35),inset 1px 0 0 rgba(255,255,255,.4),inset -1px 0 0 rgba(255,255,255,.4);
+  --grad:linear-gradient(135deg,#6d4af0 0%,#2bb5c8 100%)}
+:root[data-bg="claro"] body{background:linear-gradient(135deg,#ebeeff 0%,#e2f6f6 52%,#efe8fb 100%) fixed}
+:root[data-bg="claro"] .glow{display:block}
+:root[data-bg="claro"] body::before{background:transparent}
+:root[data-bg="claro"] .side,:root[data-bg="claro"] .topbar{background:rgba(255,255,255,.46) !important;border-color:rgba(255,255,255,.75) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);box-shadow:var(--brillo),0 8px 30px rgba(60,50,120,.08) !important}
+:root[data-bg="claro"] .block,:root[data-bg="claro"] .card,:root[data-bg="claro"] .tile,:root[data-bg="claro"] .chk,
+:root[data-bg="claro"] .msg,:root[data-bg="claro"] .tablewrap,:root[data-bg="claro"] details.more,:root[data-bg="claro"] .convs,
+:root[data-bg="claro"] .chat-log,:root[data-bg="claro"] #drawer{background:var(--vidrio) !important;border:1px solid rgba(255,255,255,.85) !important;
+  box-shadow:var(--brillo),0 14px 44px rgba(60,50,120,.12) !important;-webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%)}
+:root[data-bg="claro"] .btn,:root[data-bg="claro"] .chips button,:root[data-bg="claro"] .funnel button,:root[data-bg="claro"] .states button,
+:root[data-bg="claro"] .cities a,:root[data-bg="claro"] .sync,:root[data-bg="claro"] .theme{background:rgba(255,255,255,.58) !important;border:1px solid rgba(255,255,255,.85) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 14px rgba(60,50,120,.08) !important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+:root[data-bg="claro"] .btn:hover,:root[data-bg="claro"] .chips button:hover{background:rgba(255,255,255,.8) !important}
+:root[data-bg="claro"] .btn.pri,:root[data-bg="claro"] #tabs button[aria-selected="true"],:root[data-bg="claro"] .chips button[aria-pressed="true"]{
+  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.55) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px rgba(109,74,240,.32) !important}
+:root[data-bg="claro"] .btn.pri:hover{filter:brightness(1.06)}
+:root[data-bg="claro"] #tabs button:hover{background:rgba(255,255,255,.6)}
+:root[data-bg="claro"] #tabs .badge{background:rgba(255,255,255,.9);color:#4c3bb5}
+:root[data-bg="claro"] input[type=text],:root[data-bg="claro"] input[type=date],:root[data-bg="claro"] input[type=search],
+:root[data-bg="claro"] input[type=email],:root[data-bg="claro"] input[type=password],:root[data-bg="claro"] select,:root[data-bg="claro"] textarea{
+  background:rgba(255,255,255,.6) !important;border:1px solid rgba(255,255,255,.9) !important;box-shadow:inset 0 1px 3px rgba(60,50,120,.08)}
+:root[data-bg="claro"] input.nota-in{background:none !important;box-shadow:none !important;border:0 !important;border-bottom:1px dashed transparent !important}
+:root[data-bg="claro"] .chat-in{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo),0 10px 30px rgba(60,50,120,.12);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+:root[data-bg="claro"] .chat-in textarea,:root[data-bg="claro"] .lupa input{box-shadow:none !important}
+:root[data-bg="claro"] .b.bot .t{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo)}
+:root[data-bg="claro"] .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(109,74,240,.28)}
+:root[data-bg="claro"] tr.click:hover td{background:rgba(255,255,255,.45)}
+:root[data-bg="claro"] td,:root[data-bg="claro"] th{border-bottom:1px solid rgba(110,100,170,.12)}
+:root[data-bg="claro"] .cv:hover,:root[data-bg="claro"] .cv.on{background:rgba(255,255,255,.55)}
+:root[data-bg="claro"] .scrim{background:rgba(60,50,120,.18)}
+:root[data-bg="claro"] .login-card{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);box-shadow:var(--brillo),0 20px 60px rgba(60,50,120,.18);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%)}
+:root[data-bg="claro"] .login{background:transparent}
+:root[data-bg="claro"] .tick{background:rgba(255,255,255,.6)}
+:root[data-bg="claro"] .tick.on{background:#16a34a}
+:root[data-bg="claro"] h1,:root[data-bg="claro"] h2{color:#1b1d3a}
 </style>
 
 <div class="login" id="login" hidden>
@@ -789,11 +836,13 @@ th.c,td.c{text-align:center}
       <div class="chat-log" id="c-log" aria-live="polite"></div>
       <form class="chat-in" id="c-form">
         <textarea id="c-text" rows="1" placeholder="Me respondió… (pegá lo que dijo el DJ)"></textarea>
+        <button class="btn sm" type="button" id="c-gpt" title="Copia las instrucciones y abre ChatGPT">ChatGPT ↗</button>
         <button class="btn pri" type="submit" id="c-send" aria-label="Enviar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
       <details class="rapidos"><summary>Mensajes rápidos</summary><div class="chat-opts" id="c-opts"></div></details>
       <details class="rapidos" id="estilo-box" hidden><summary>Estilo de contacto (solo Renata)</summary>
-        <textarea id="estilo-txt" rows="6" placeholder="Pegá acá cómo contactan Agus Cuenca y Alexis Assad: sus guiones, ejemplos de mensajes, reglas. La IA escribe en ese estilo."></textarea></details>
+        <textarea id="estilo-txt" rows="6" placeholder="Pegá acá cómo contactan Agus Cuenca y Alexis Assad: sus guiones, ejemplos de mensajes, reglas. La IA escribe en ese estilo."></textarea>
+        <input type="text" id="gpt-url" placeholder="Link de tu GPT entrenado en ChatGPT (opcional)" aria-label="Link de tu GPT" style="width:100%;margin-top:8px"></details>
     </div>
     </div>
   </section>
@@ -1445,8 +1494,9 @@ document.addEventListener("toggle", e=>{
 const RESP_OK=["respondio","planes","quiere","cerrado"];
 // nota escrita directo debajo de cada DJ
 document.addEventListener("change", e=>{
-  const id=e.target.dataset?.nota; if(!id) return; const L=LEADS[id]; if(!L) return;
-  store.put({...L, notas:e.target.value.trim(), upd:hoy()});
+  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp; if(!id) return; const L=LEADS[id]; if(!L) return;
+  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : "ultResp";
+  store.put({...L, [campo]:e.target.value.trim(), upd:hoy()});
 });
 /* acciones en filas (Hoy + recientes) */
 document.addEventListener("click", e=>{
@@ -1566,7 +1616,7 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td class="mono">${esc(L.seguidores||"")}</td><td>${esc(L.bio||"")}</td><td class="c"><button type="button" class="tick ${L.estado==="enviado"?"on":""}" data-sent aria-pressed="${L.estado==="enviado"}" title="Mensaje enviado" aria-label="Mensaje enviado">✓</button></td><td class="c"><button type="button" class="tick ${RESP_OK.includes(L.estado)?"on":""}" data-tick aria-pressed="${RESP_OK.includes(L.estado)}" title="Respondió" aria-label="Respondió">✓</button></td></tr>`).join("")
+  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td class="mono">${esc(L.seguidores||"")}</td><td>${esc(L.bio||"")}</td><td class="c"><button type="button" class="tick ${L.estado==="enviado"?"on":""}" data-sent aria-pressed="${L.estado==="enviado"}" title="Mensaje enviado" aria-label="Mensaje enviado">✓</button><input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c"><button type="button" class="tick ${RESP_OK.includes(L.estado)?"on":""}" data-tick aria-pressed="${RESP_OK.includes(L.estado)}" title="Respondió" aria-label="Respondió">✓</button><input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td></tr>`).join("")
     : `<tr><td colspan="6" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
@@ -1618,6 +1668,7 @@ function renderMensajes(){
   if(SB && !PF) cargarPerfiles();
   $("#estilo-box").hidden = !!SB && !ADMIN;
   if(document.activeElement!==$("#estilo-txt")) $("#estilo-txt").value=CFG.estilo||"";
+  if(document.activeElement!==$("#gpt-url")) $("#gpt-url").value=CFG.gptUrl||"";
   renderLista();
   $("#m-djs").innerHTML = Object.values(LEADS).map(L=>`<option value="@${esc(L.user)}">${esc([L.nombre, PAIS[L.pais]?.n].filter(Boolean).join(" · "))}</option>`).join("");
   $("#m-tono").innerHTML = [["vos","Argentina · vos"],["tu","Resto · tú"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${MT===v}">${l}</button>`).join("");
@@ -1645,16 +1696,14 @@ function renderChat(){
 function agregarPlantilla(k){
   CHAT.push({de:"setter", k, txt:texto(k, chatLead(), MT)}); renderChat(); guardarCharla();
 }
-async function responderIA(dijo){
-  CHAT.push({de:"dj", txt:dijo});
-  const slot={de:"setter", txt:""}; CHAT.push(slot); renderChat();
-  PENSANDO=true; $("#c-send").disabled=true;
+// arma las instrucciones completas para la IA (sirve para el chat de la app y para pegar en ChatGPT)
+function armarPrompt(mensajes){
   const tono = MT==="vos"?"español rioplatense con vos (Argentina)":"español neutro con tú";
   const lib = ["/p1","/p2","/p3","/p4","/web","/planes","/wsp","¿Cuánto sale?","Tengo Linktree / Canva","Tengo web de plantilla","Ahora no","No tengo plata","Pasame info"]
     .map(k=>`${k}: ${texto(k,chatLead(),MT)}`).join("\n");
-  const charla = CHAT.slice(0,-1).map(m=>`${m.de==="dj"?"DJ":"Setter"}: ${m.txt}`).join("\n");
+  const charla = mensajes.filter(m=>m.txt).map(m=>`${m.de==="dj"?"DJ":"Setter"}: ${m.txt}`).join("\n");
   const nombre = $("#m-nombre").value.trim();
-  const prompt = `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
+  return `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
 Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes cortos (máximo 3 líneas); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
 ${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
@@ -1665,6 +1714,12 @@ Conversación hasta ahora:
 ${charla}
 
 Escribí SOLO el próximo mensaje de la setter, listo para pegar en Instagram. Sin comillas, sin explicaciones.`;
+}
+async function responderIA(dijo){
+  CHAT.push({de:"dj", txt:dijo});
+  const slot={de:"setter", txt:""}; CHAT.push(slot); renderChat();
+  PENSANDO=true; $("#c-send").disabled=true;
+  const prompt = armarPrompt(CHAT.slice(0,-1));
   try{
     const r = await SAMPLE(prompt, {modelTier:"quick", cache:false, onText:({text})=>{ slot.txt=text; renderChat(); }});
     slot.txt = (r.text||"").trim() || "No me salió nada. Probá de nuevo.";
@@ -1685,6 +1740,15 @@ $("#c-log").addEventListener("click", e=>{
   const b=e.target.closest("[data-cc]"); if(b) copiar(CHAT[+b.dataset.cc].txt, b);
 });
 $("#estilo-txt").addEventListener("change", e=>store.cfg({estilo:e.target.value.trim()}));
+$("#gpt-url").addEventListener("change", e=>store.cfg({gptUrl:e.target.value.trim()}));
+// ChatGPT (con tu cuenta Pro, sin clave): copia las instrucciones con la charla y abre ChatGPT para pegarlas
+$("#c-gpt").addEventListener("click", async e=>{
+  const dijo=$("#c-text").value.trim();
+  const msgs=[...CHAT.filter(m=>m.txt), ...(dijo?[{de:"dj",txt:dijo}]:[])];
+  const url=/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(CFG.gptUrl||"") ? CFG.gptUrl : "https://chatgpt.com/";
+  await copiar(armarPrompt(msgs), e.currentTarget);
+  window.open(url, "_blank", "noopener"); toast("Copiado: pegalo en ChatGPT (Ctrl+V)", 3000);
+});
 $("#c-new").addEventListener("click", ()=>{ CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); });
 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */

@@ -2225,10 +2225,18 @@ document.addEventListener("keydown", e=>{
   }
   if(SB){
     // versión web: la IA es la función "chat" de Supabase (usa la clave de OpenAI guardada ahí, nadie la ve)
+    // reintenta hasta 3 veces (Gemini gratis a veces está saturado): puede tardar un poco más, pero responde
     SAMPLE = async (prompt, opts)=>{
-      const {data, error} = await SB.functions.invoke("chat", {body:{prompt, search:!!opts?.search}});
-      if(error){ let m="No pude conectar con la IA."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
-      return {text:data.text};
+      let ultimo=null;
+      for(let i=0;i<3;i++){
+        const {data, error} = await SB.functions.invoke("chat", {body:{prompt, search:!!opts?.search}});
+        if(!error && data?.text) return {text:data.text};
+        let m="No pude conectar con la IA."; if(error){ try{ m=(await error.context.json()).error||m; }catch{} }
+        ultimo=new Error(m);
+        if(/entrar primero|no está en el equipo/i.test(m)) break;
+        await new Promise(r=>setTimeout(r,2500));
+      }
+      throw ultimo;
     };
   } else { try{ SAMPLE = window.claude?.use ? await window.claude.use("sample") : null; }catch{ SAMPLE=null; } }
   if(TAB==="mensajes") renderChat();

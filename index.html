@@ -921,6 +921,9 @@ th.c,td.c{text-align:center}
       <form class="lupa" id="ci-f"><input type="search" id="ci-q" placeholder="Ej: reels de DJs que mostraron su presskit" aria-label="Buscar ideas" autocomplete="off">
         <button class="btn pri" type="submit" id="ci-go" aria-label="Buscar ideas"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button></form>
       <div class="ci-out" id="ci-out" hidden></div>
+      <details class="rapidos"><summary>Mi método de contenido</summary>
+        <textarea id="ec-txt" rows="9" aria-label="Mi método de contenido"></textarea>
+        <div class="sub" style="margin-top:6px">Armado con el esquema de los cursos de Cuenca Content y Signal Content. Pegá acá tus apuntes de las clases para que las ideas salgan con tu método.</div></details>
     </div>
     <div class="card ct-ia">
       <h2>DJs que comentan</h2>
@@ -1455,7 +1458,7 @@ function render(){
   if(TAB==="leads") renderLeads();
   if(TAB==="reporte") renderReporte();
   if(TAB==="perfiles") renderPerfiles();
-  if(TAB==="contenido") renderContenido();
+  if(TAB==="contenido"){ renderContenido(); if(document.activeElement!==$("#ec-txt")) $("#ec-txt").value = CFG.estiloContenido ?? ESTILO_CONTENIDO_BASE; }
   if(DRAWER) refreshDrawerStates();
 }
 
@@ -2163,12 +2166,21 @@ $("#cc-go").addEventListener("click", async ()=>{
     await store.put(L); nuevos++; }
   $("#cc-msg").textContent=`${nuevos} DJs nuevos en tu CRM${users.length-nuevos?` (${users.length-nuevos} ya estaban)`:""}`; $("#cc-txt").value="";
 });
+// método de contenido: esquema de los cursos de Cuenca Content (Marca Personal) y Signal Content (Estrategia de Marca y Arquitectura de Contenido); Renata lo puede completar con sus apuntes
+const ESTILO_CONTENIDO_BASE = `1) Marca personal: tener un objetivo claro, optimizar el perfil de Instagram (bio que diga quién sos y qué ofrecés) y saber qué contenido hace crecer y cuál vende.
+2) Formatos: variar entre reels, carruseles e historias; cada pieza con un objetivo (atraer, generar confianza o vender).
+3) Guiones: gancho en la primera frase, desarrollo corto y llamada a la acción. Hay guiones virales (para alcance) y guiones de venta (para convertir).
+4) Ideas: buscar ideas que ya funcionan en otras cuentas y adaptarlas a tu caso, nunca copiarlas iguales.
+5) Producción por lotes: grabar varios videos de una vez y organizarlos en un calendario semanal.
+6) Plan de marketing: calendario de contenido, métricas y herramientas que ahorran tiempo (por ejemplo Manychat y Metricool).
+7) Oferta y cierre: cuando alguien interactúa, llevarlo a una conversación y a una oferta clara.`;
+$("#ec-txt").addEventListener("change", e=>store.cfg({estiloContenido:e.target.value.trim()}));
 $("#ci-f").addEventListener("submit", async e=>{
   e.preventDefault(); const q=$("#ci-q").value.trim(); const out=$("#ci-out"); out.hidden=false;
   if(!SAMPLE){ out.textContent="La IA no está disponible acá."; return; }
   out.textContent="Buscando…"; $("#ci-go").disabled=true;
   try{
-    const r=await SAMPLE(`Soy Renata, DJ argentina (melodic techno). Con Playskit hago webs presskit a medida para DJs y vendo por Instagram y TikTok. Buscá en la web ideas de contenido (reels, carruseles, historias) de cuentas de DJs, de diseño y de presskits que estén funcionando ahora${q?`, sobre: ${q}`:""}. Después adaptá las mejores a lo que hago yo: dame 5 ideas, cada una con gancho (primera frase), formato, qué mostrar y por qué funciona. Español rioplatense, corto y concreto.`, {search:true});
+    const r=await SAMPLE(`Soy Renata, DJ argentina (melodic techno). Con Playskit hago webs presskit a medida para DJs y vendo por Instagram y TikTok. Buscá en la web ideas de contenido (reels, carruseles, historias) de cuentas de DJs, de diseño y de presskits que estén funcionando ahora${q?`, sobre: ${q}`:""}. Después adaptá las mejores a lo que hago yo: dame 5 ideas, cada una con gancho (primera frase), formato, qué mostrar y por qué funciona. Español rioplatense, corto y concreto.\nUsá este método de contenido (de los cursos de Cuenca Content y Signal Content):\n${CFG.estiloContenido ?? ESTILO_CONTENIDO_BASE}`, {search:true});
     out.textContent=r.text||"No me salió nada. Probá de nuevo.";
   }catch(err){ out.textContent=err.message||"No pude buscar ahora."; }
   $("#ci-go").disabled=false;

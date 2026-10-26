@@ -668,6 +668,47 @@ th.c,td.c{text-align:center}
 :root[data-bg="claro"] .tick{background:rgba(255,255,255,.6)}
 :root[data-bg="claro"] .tick.on{background:#16a34a}
 :root[data-bg="claro"] h1,:root[data-bg="claro"] h2{color:#1b1d3a}
+:root[data-bg="claro"] .hero-chat{background:transparent !important;border:0 !important;box-shadow:none !important;-webkit-backdrop-filter:none;backdrop-filter:none}
+.chat-in #c-gpt{width:auto;height:36px;padding:0 14px;border-radius:999px;font-size:13px;white-space:nowrap;flex:none}
+
+/* ===== Liquid glass también en gris y negro: mismo diseño, con vidrio oscuro y los mismos brillos violeta y verde agua ===== */
+:root:is([data-bg="gris"],[data-bg="negro"]){
+  --glow1:rgba(124,58,237,.36); --glow2:rgba(20,216,196,.26); --glow3:rgba(236,72,153,.14);
+  --glass:rgba(255,255,255,.07); --glass-2:rgba(255,255,255,.10); --glass-brd:rgba(255,255,255,.16); --glass-hi:rgba(255,255,255,.26);
+  --brillo:inset 0 1px 0 rgba(255,255,255,.24),inset 0 -1px 0 rgba(255,255,255,.05),inset 1px 0 0 rgba(255,255,255,.08),inset -1px 0 0 rgba(255,255,255,.08);
+  --grad:linear-gradient(135deg,#6d4af0 0%,#2bb5c8 100%); --r:24px}
+:root[data-bg="gris"] body{background:linear-gradient(135deg,#171436 0%,#0f2431 55%,#1d1336 100%) fixed}
+:root[data-bg="negro"] body{background:linear-gradient(135deg,#08061a 0%,#061519 55%,#0e0719 100%) fixed}
+:root:is([data-bg="gris"],[data-bg="negro"]) .glow{display:block}
+:root:is([data-bg="gris"],[data-bg="negro"]) body::before{background:transparent}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.side,.topbar){background:rgba(255,255,255,.06) !important;border-color:rgba(255,255,255,.12) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:var(--brillo) !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.block,.card,.tile,.chk,.msg,.tablewrap,details.more,.convs,.chat-log,#drawer){
+  background:rgba(255,255,255,.07) !important;border:1px solid rgba(255,255,255,.14) !important;
+  box-shadow:var(--brillo),0 14px 44px rgba(0,0,0,.38) !important;-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .hero-chat{background:transparent !important;border:0 !important;box-shadow:none !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn,.chips button,.funnel button,.states button,.cities a,.sync,.theme){
+  background:rgba(255,255,255,.09) !important;border:1px solid rgba(255,255,255,.16) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.22) !important;color:var(--ink)}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn:hover,.chips button:hover){background:rgba(255,255,255,.16) !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"]){
+  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.35) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px rgba(109,74,240,.4) !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) #tabs button{border-radius:999px;border-bottom:0;font-weight:500}
+:root:is([data-bg="gris"],[data-bg="negro"]) #tabs button:hover{background:rgba(255,255,255,.1)}
+:root:is([data-bg="gris"],[data-bg="negro"]) #tabs .badge{background:rgba(255,255,255,.9);color:#2d1f7a}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(input[type=text],input[type=date],input[type=search],input[type=email],input[type=password],select,textarea){
+  background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.16) !important;color:var(--ink);box-shadow:none}
+:root:is([data-bg="gris"],[data-bg="negro"]) input.nota-in{background:none !important;border:0 !important;border-bottom:1px dashed transparent !important;border-radius:0 !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) .chat-in{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:var(--brillo),0 10px 30px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.chat-in textarea,.lupa input){background:transparent !important;border:0 !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) .lupa input{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.16) !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) .b.bot .t{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);box-shadow:var(--brillo)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(109,74,240,.35)}
+:root:is([data-bg="gris"],[data-bg="negro"]) tr.click:hover td{background:rgba(255,255,255,.07)}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(td,th){border-bottom:1px solid rgba(255,255,255,.1)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .tick{background:rgba(255,255,255,.1)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .tick.on{background:#16a34a}
+:root:is([data-bg="gris"],[data-bg="negro"]) .login-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:var(--brillo),0 20px 60px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .login{background:transparent}
 </style>
 
 <div class="login" id="login" hidden>

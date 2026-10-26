@@ -471,6 +471,14 @@ select option{background:var(--surface);color:var(--ink)}
   .side-foot .pie-acts{flex-direction:column;gap:4px}
   .side-foot .pie-acts .btn{width:100%;justify-content:center}
 }
+/* pantallas bajas: menú más compacto para que se vean los 3 botones del pie sin scrollear */
+@media (min-width:821px) and (max-height:960px){
+  .side{gap:10px;padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:10px}
+  .side .logo img,.side .logo .pk{width:80px;height:auto}
+  #tabs{gap:2px}
+  #tabs button{padding:8px 12px;font-size:15px}
+  .side-foot .pie-acts .btn{padding:6px 10px}
+}
 
 /* Perfiles */
 .pf-mio{margin-bottom:8px;max-width:760px}

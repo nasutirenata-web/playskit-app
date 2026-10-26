@@ -709,6 +709,24 @@ th.c,td.c{text-align:center}
 :root:is([data-bg="gris"],[data-bg="negro"]) .tick.on{background:#16a34a}
 :root:is([data-bg="gris"],[data-bg="negro"]) .login-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:var(--brillo),0 20px 60px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%)}
 :root:is([data-bg="gris"],[data-bg="negro"]) .login{background:transparent}
+
+/* ===== Negro: negro puro con todo lo demás en celeste ===== */
+:root[data-bg="negro"]{
+  --glow1:rgba(56,189,248,.30); --glow2:rgba(34,211,238,.20); --glow3:rgba(125,211,252,.12);
+  --accent:#38bdf8; --accent-ink:#04202c; --accent-soft:rgba(56,189,248,.16);
+  --grad:linear-gradient(135deg,#0ea5e9 0%,#67e8f9 100%)}
+:root[data-bg="negro"] body{background:linear-gradient(135deg,#000000 0%,#03121a 55%,#000000 100%) fixed}
+:root[data-bg="negro"] :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"]){
+  color:#04202c !important;border-color:rgba(186,230,253,.5) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px rgba(56,189,248,.38) !important}
+:root[data-bg="negro"] .b.me .t{color:#04202c;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(56,189,248,.32)}
+:root[data-bg="negro"] #tabs .badge{background:#7dd3fc;color:#04202c}
+:root[data-bg="negro"] :is(.side,.topbar){background:rgba(56,189,248,.05) !important;border-color:rgba(125,211,252,.16) !important}
+:root[data-bg="negro"] :is(.block,.card,.tile,.chk,.msg,.tablewrap,details.more,.convs,.chat-log,#drawer){border-color:rgba(125,211,252,.18) !important;background:rgba(56,189,248,.05) !important}
+:root[data-bg="negro"] :is(.btn,.chips button,.funnel button,.states button,.cities a,.sync,.theme){border-color:rgba(125,211,252,.22) !important}
+:root[data-bg="negro"] :is(h1,h2,.topbar h1){color:#e0f6ff}
+:root[data-bg="negro"] a{color:#7dd3fc}
+:root[data-bg="negro"] .nota-in,:root[data-bg="negro"] .nota-txt,:root[data-bg="negro"] .nota-in.tx.resp{color:#7dd3fc !important}
+:root[data-bg="negro"] .nota-in.tx:not(.resp){color:#9fb4c0 !important}
 </style>
 
 <div class="login" id="login" hidden>

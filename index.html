@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="playskit-estrella-oscuro.webp">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
 <style>html,body{margin:0}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 
 <title>Playskit Setter</title>
@@ -498,8 +498,13 @@ th.c,td.c{text-align:center}
 .tick:hover{border-color:var(--ok);color:var(--ok)}
 .tick.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .prio{display:inline-block;font:700 11.5px var(--f-body);padding:2px 9px;border-radius:99px;border:1px solid var(--glass-brd);color:var(--muted)}
-.prio.alta{background:var(--ok-soft);color:var(--ok);border-color:transparent}
-.prio.media{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+/* prioridad: alta roja, media verde agua, baja violeta (solo la palabra) */
+.prio.alta{background:#fee2e2;color:#b91c1c;border-color:transparent}
+.prio.media{background:#ccfbf1;color:#0f766e;border-color:transparent}
+.prio.baja{background:#ede9fe;color:#6d28d9;border-color:transparent}
+:root:not([data-bg="claro"]) .prio.alta{background:rgba(248,113,113,.18);color:#fca5a5}
+:root:not([data-bg="claro"]) .prio.media{background:rgba(45,212,191,.18);color:#5eead4}
+:root:not([data-bg="claro"]) .prio.baja{background:rgba(167,139,250,.2);color:#c4b5fd}
 .prio.big{font-size:15px;padding:5px 14px}
 /* menú arriba en horizontal, solo con las palabras (en compu; en celu ya era así) */
 @media (min-width:821px){
@@ -590,6 +595,9 @@ th.c,td.c{text-align:center}
 :root[data-bg="claro"] input[type=text],:root[data-bg="claro"] input[type=date],:root[data-bg="claro"] input[type=search],
 :root[data-bg="claro"] input[type=email],:root[data-bg="claro"] input[type=password],:root[data-bg="claro"] select,:root[data-bg="claro"] textarea{
   background:#ffffff !important;border:1px solid var(--line) !important;border-radius:12px !important}
+:root[data-bg="claro"] input.nota-in{background:none !important;border:0 !important;border-bottom:1px dashed transparent !important;border-radius:0 !important;padding:2px 0 !important;min-width:0}
+:root[data-bg="claro"] input.nota-in:hover,:root[data-bg="claro"] input.nota-in:focus{border-bottom-color:#0b8fb5 !important}
+:root[data-bg="claro"] input.nota-in::placeholder{color:#b4bac6;font-size:12px}
 :root[data-bg="claro"] .lupa input,:root[data-bg="claro"] .chat-in textarea{background:#ffffff !important}
 :root[data-bg="claro"] .chat-in{background:#ffffff;border:1px solid var(--line);box-shadow:0 4px 16px rgba(20,24,40,.06)}
 :root[data-bg="claro"] .chat-in textarea{border:0 !important}
@@ -602,9 +610,6 @@ th.c,td.c{text-align:center}
 :root[data-bg="claro"] .sync,:root[data-bg="claro"] .theme{background:#ffffff !important;border:1px solid var(--line) !important}
 :root[data-bg="claro"] .theme button[aria-pressed="true"]{background:var(--chip)}
 :root[data-bg="claro"] .tick.on{background:#16a34a;border-color:#16a34a}
-:root[data-bg="claro"] .prio.alta{background:#dcfce7;color:#15803d}
-:root[data-bg="claro"] .prio.media{background:#fef3c7;color:#a16207}
-:root[data-bg="claro"] .prio.baja{background:#f1f3f8}
 :root[data-bg="claro"] .est{border-radius:999px}
 :root[data-bg="claro"] .cv:hover,:root[data-bg="claro"] .cv.on{background:#f4f5f9}
 :root[data-bg="claro"] h1,:root[data-bg="claro"] .topbar h1{font-weight:700;letter-spacing:-.02em}
@@ -903,7 +908,7 @@ function prioDe(L){
   const pts=s+b; if(n===null && !L.bio) return {pts:0, k:"sin", n:"Sin datos"};
   return {pts, k: pts>=4?"alta":pts>=2?"media":"baja", n: pts>=4?"Alta":pts>=2?"Media":"Baja"};
 }
-const prioTag=(L,big)=>{ const p=prioDe(L); return `<span class="prio ${p.k} ${big?"big":""}">${p.k==="alta"?"🔥 ":""}${p.n}</span>`; };
+const prioTag=(L,big)=>{ const p=prioDe(L); return `<span class="prio ${p.k} ${big?"big":""}">${p.n}</span>`; };
 let toastT;
 function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,1800); }
 async function copiar(texto, btn){

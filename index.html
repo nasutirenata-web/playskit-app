@@ -498,6 +498,11 @@ select option{background:var(--surface);color:var(--ink)}
 .chat-in{background:var(--glass-2);border:1px solid var(--glass-brd);border-radius:26px;padding:6px 8px 6px 14px;align-items:center}
 .chat-in textarea{border:0 !important;background:none !important;min-height:40px;box-shadow:none !important;padding:10px 4px !important;resize:none}
 .chat-in .btn{width:42px;height:42px;padding:0;border-radius:50%;justify-content:center}
+details.rapidos[hidden]{display:none}
+.opts-t{display:flex;flex-direction:column;gap:8px;white-space:normal !important;max-width:640px}
+.opts-t .opt-l{font-size:12px;color:var(--muted);min-width:100%}
+.opts-t button{border:1px solid var(--glass-brd);background:rgba(255,255,255,.55);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;color:inherit}
+.opts-t button:hover{background:rgba(255,255,255,.85)}
 details.rapidos{font-size:14px;color:var(--muted)}
 details.rapidos summary{cursor:pointer;padding:4px 2px}
 details.rapidos textarea{width:100%;margin-top:8px;border:1px solid var(--glass-brd);background:var(--glass-2);border-radius:14px;padding:10px 12px;color:var(--ink);font-size:14px}
@@ -627,43 +632,43 @@ th.c,td.c{text-align:center}
 
 /* ===== Liquid glass (tema claro): fondo con degradé violeta y verde agua, vidrio esmerilado con brillo en el borde ===== */
 :root[data-bg="claro"]{
-  --bg:#eceffc; --glass:rgba(255,255,255,.50); --glass-2:rgba(255,255,255,.66); --glass-brd:rgba(255,255,255,.82); --glass-hi:rgba(255,255,255,.95);
-  --glow1:rgba(124,58,237,.34); --glow2:rgba(20,216,196,.34); --glow3:rgba(236,72,153,.16);
-  --shadow:rgba(60,50,120,.14); --line:rgba(110,100,170,.16); --chip:rgba(255,255,255,.55); --muted:#6f7590; --r:24px;
+  --bg:#e8f2fd; --glass:rgba(255,255,255,.50); --glass-2:rgba(255,255,255,.66); --glass-brd:rgba(255,255,255,.82); --glass-hi:rgba(255,255,255,.95);
+  --glow1:rgba(56,189,248,.34); --glow2:rgba(20,216,196,.34); --glow3:rgba(125,211,252,.16);
+  --shadow:rgba(30,70,110,.14); --line:rgba(90,135,175,.16); --chip:rgba(255,255,255,.55); --muted:#6f7590; --r:24px;
   --vidrio:rgba(255,255,255,.50); --brillo:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35),inset 1px 0 0 rgba(255,255,255,.4),inset -1px 0 0 rgba(255,255,255,.4);
-  --grad:linear-gradient(135deg,#6d4af0 0%,#2bb5c8 100%)}
-:root[data-bg="claro"] body{background:linear-gradient(135deg,#ebeeff 0%,#e2f6f6 52%,#efe8fb 100%) fixed}
+  --grad:linear-gradient(135deg,#2f9bf2 0%,#22cfd8 100%)}
+:root[data-bg="claro"] body{background:linear-gradient(135deg,#e6f2ff 0%,#e2f6f6 52%,#e7f0fb 100%) fixed}
 :root[data-bg="claro"] .glow{display:block}
 :root[data-bg="claro"] body::before{background:transparent}
 :root[data-bg="claro"] .side,:root[data-bg="claro"] .topbar{background:rgba(255,255,255,.46) !important;border-color:rgba(255,255,255,.75) !important;
-  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);box-shadow:var(--brillo),0 8px 30px rgba(60,50,120,.08) !important}
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);box-shadow:var(--brillo),0 8px 30px rgba(30,70,110,.08) !important}
 :root[data-bg="claro"] .block,:root[data-bg="claro"] .card,:root[data-bg="claro"] .tile,:root[data-bg="claro"] .chk,
 :root[data-bg="claro"] .msg,:root[data-bg="claro"] .tablewrap,:root[data-bg="claro"] details.more,:root[data-bg="claro"] .convs,
 :root[data-bg="claro"] .chat-log,:root[data-bg="claro"] #drawer{background:var(--vidrio) !important;border:1px solid rgba(255,255,255,.85) !important;
-  box-shadow:var(--brillo),0 14px 44px rgba(60,50,120,.12) !important;-webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%)}
+  box-shadow:var(--brillo),0 14px 44px rgba(30,70,110,.12) !important;-webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%)}
 :root[data-bg="claro"] .btn,:root[data-bg="claro"] .chips button,:root[data-bg="claro"] .funnel button,:root[data-bg="claro"] .states button,
 :root[data-bg="claro"] .cities a,:root[data-bg="claro"] .sync,:root[data-bg="claro"] .theme{background:rgba(255,255,255,.58) !important;border:1px solid rgba(255,255,255,.85) !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 14px rgba(60,50,120,.08) !important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 14px rgba(30,70,110,.08) !important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 :root[data-bg="claro"] .btn:hover,:root[data-bg="claro"] .chips button:hover{background:rgba(255,255,255,.8) !important}
 :root[data-bg="claro"] .btn.pri,:root[data-bg="claro"] #tabs button[aria-selected="true"],:root[data-bg="claro"] .chips button[aria-pressed="true"]{
   background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.55) !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px rgba(109,74,240,.32) !important}
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px rgba(47,155,242,.32) !important}
 :root[data-bg="claro"] .btn.pri:hover{filter:brightness(1.06)}
 :root[data-bg="claro"] #tabs button:hover{background:rgba(255,255,255,.6)}
-:root[data-bg="claro"] #tabs .badge{background:rgba(255,255,255,.9);color:#4c3bb5}
+:root[data-bg="claro"] #tabs .badge{background:rgba(255,255,255,.9);color:#0b5c85}
 :root[data-bg="claro"] input[type=text],:root[data-bg="claro"] input[type=date],:root[data-bg="claro"] input[type=search],
 :root[data-bg="claro"] input[type=email],:root[data-bg="claro"] input[type=password],:root[data-bg="claro"] select,:root[data-bg="claro"] textarea{
-  background:rgba(255,255,255,.6) !important;border:1px solid rgba(255,255,255,.9) !important;box-shadow:inset 0 1px 3px rgba(60,50,120,.08)}
+  background:rgba(255,255,255,.6) !important;border:1px solid rgba(255,255,255,.9) !important;box-shadow:inset 0 1px 3px rgba(30,70,110,.08)}
 :root[data-bg="claro"] input.nota-in{background:none !important;box-shadow:none !important;border:0 !important;border-bottom:1px dashed transparent !important}
-:root[data-bg="claro"] .chat-in{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo),0 10px 30px rgba(60,50,120,.12);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+:root[data-bg="claro"] .chat-in{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo),0 10px 30px rgba(30,70,110,.12);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
 :root[data-bg="claro"] .chat-in textarea,:root[data-bg="claro"] .lupa input{box-shadow:none !important}
 :root[data-bg="claro"] .b.bot .t{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo)}
-:root[data-bg="claro"] .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(109,74,240,.28)}
+:root[data-bg="claro"] .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(47,155,242,.28)}
 :root[data-bg="claro"] tr.click:hover td{background:rgba(255,255,255,.45)}
-:root[data-bg="claro"] td,:root[data-bg="claro"] th{border-bottom:1px solid rgba(110,100,170,.12)}
+:root[data-bg="claro"] td,:root[data-bg="claro"] th{border-bottom:1px solid rgba(90,135,175,.12)}
 :root[data-bg="claro"] .cv:hover,:root[data-bg="claro"] .cv.on{background:rgba(255,255,255,.55)}
-:root[data-bg="claro"] .scrim{background:rgba(60,50,120,.18)}
-:root[data-bg="claro"] .login-card{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);box-shadow:var(--brillo),0 20px 60px rgba(60,50,120,.18);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%)}
+:root[data-bg="claro"] .scrim{background:rgba(30,70,110,.18)}
+:root[data-bg="claro"] .login-card{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);box-shadow:var(--brillo),0 20px 60px rgba(30,70,110,.18);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%)}
 :root[data-bg="claro"] .login{background:transparent}
 :root[data-bg="claro"] .tick{background:rgba(255,255,255,.6)}
 :root[data-bg="claro"] .tick.on{background:#16a34a}
@@ -673,11 +678,11 @@ th.c,td.c{text-align:center}
 
 /* ===== Liquid glass también en gris y negro: mismo diseño, con vidrio oscuro y los mismos brillos violeta y verde agua ===== */
 :root:is([data-bg="gris"],[data-bg="negro"]){
-  --glow1:rgba(124,58,237,.36); --glow2:rgba(20,216,196,.26); --glow3:rgba(236,72,153,.14);
+  --glow1:rgba(56,189,248,.36); --glow2:rgba(20,216,196,.26); --glow3:rgba(125,211,252,.14);
   --glass:rgba(255,255,255,.07); --glass-2:rgba(255,255,255,.10); --glass-brd:rgba(255,255,255,.16); --glass-hi:rgba(255,255,255,.26);
   --brillo:inset 0 1px 0 rgba(255,255,255,.24),inset 0 -1px 0 rgba(255,255,255,.05),inset 1px 0 0 rgba(255,255,255,.08),inset -1px 0 0 rgba(255,255,255,.08);
-  --grad:linear-gradient(135deg,#6d4af0 0%,#2bb5c8 100%); --r:24px}
-:root[data-bg="gris"] body{background:linear-gradient(135deg,#171436 0%,#0f2431 55%,#1d1336 100%) fixed}
+  --grad:linear-gradient(135deg,#2f9bf2 0%,#22cfd8 100%); --r:24px}
+:root[data-bg="gris"] body{background:linear-gradient(135deg,#0d2034 0%,#0c2a36 55%,#0e1d33 100%) fixed}
 :root[data-bg="negro"] body{background:linear-gradient(135deg,#08061a 0%,#061519 55%,#0e0719 100%) fixed}
 :root:is([data-bg="gris"],[data-bg="negro"]) .glow{display:block}
 :root:is([data-bg="gris"],[data-bg="negro"]) body::before{background:transparent}
@@ -691,10 +696,10 @@ th.c,td.c{text-align:center}
   background:rgba(255,255,255,.09) !important;border:1px solid rgba(255,255,255,.16) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.22) !important;color:var(--ink)}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn:hover,.chips button:hover){background:rgba(255,255,255,.16) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"]){
-  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.35) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px rgba(109,74,240,.4) !important}
+  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.35) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px rgba(47,155,242,.4) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) #tabs button{border-radius:999px;border-bottom:0;font-weight:500}
 :root:is([data-bg="gris"],[data-bg="negro"]) #tabs button:hover{background:rgba(255,255,255,.1)}
-:root:is([data-bg="gris"],[data-bg="negro"]) #tabs .badge{background:rgba(255,255,255,.9);color:#2d1f7a}
+:root:is([data-bg="gris"],[data-bg="negro"]) #tabs .badge{background:rgba(255,255,255,.9);color:#07405e}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(input[type=text],input[type=date],input[type=search],input[type=email],input[type=password],select,textarea){
   background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.16) !important;color:var(--ink);box-shadow:none}
 :root:is([data-bg="gris"],[data-bg="negro"]) input.nota-in{background:none !important;border:0 !important;border-bottom:1px dashed transparent !important;border-radius:0 !important}
@@ -702,7 +707,7 @@ th.c,td.c{text-align:center}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.chat-in textarea,.lupa input){background:transparent !important;border:0 !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) .lupa input{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.16) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) .b.bot .t{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);box-shadow:var(--brillo)}
-:root:is([data-bg="gris"],[data-bg="negro"]) .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(109,74,240,.35)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(47,155,242,.35)}
 :root:is([data-bg="gris"],[data-bg="negro"]) tr.click:hover td{background:rgba(255,255,255,.07)}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(td,th){border-bottom:1px solid rgba(255,255,255,.1)}
 :root:is([data-bg="gris"],[data-bg="negro"]) .tick{background:rgba(255,255,255,.1)}
@@ -901,7 +906,7 @@ th.c,td.c{text-align:center}
         <button class="btn sm" type="button" id="c-gpt" title="Copia las instrucciones y abre ChatGPT">ChatGPT ↗</button>
         <button class="btn pri" type="submit" id="c-send" aria-label="Enviar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
-      <details class="rapidos"><summary>Mensajes rápidos</summary><div class="chat-opts" id="c-opts"></div></details>
+      <details class="rapidos" hidden><summary>Mensajes rápidos</summary><div class="chat-opts" id="c-opts"></div></details>
       <details class="rapidos" id="estilo-box" hidden><summary>Estilo de contacto (solo Renata)</summary>
         <textarea id="estilo-txt" rows="6" placeholder="Pegá acá cómo contactan Agus Cuenca y Alexis Assad: sus guiones, ejemplos de mensajes, reglas. La IA escribe en ese estilo."></textarea>
         <input type="text" id="gpt-url" placeholder="Link de tu GPT entrenado en ChatGPT (opcional)" aria-label="Link de tu GPT" style="width:100%;margin-top:8px"></details>
@@ -1726,6 +1731,13 @@ function miNombre(){
   if(YO){ const w=YO.split("@")[0].split(/[._\d]+/)[0]; return w.replace(/^./,c=>c.toUpperCase()); }
   return "";
 }
+// opciones de mensajes de siempre (primer mensaje, preguntas, objeciones, cierre): no están a la vista, salen cuando se las pide en el chat
+function opcionesHTML(){
+  const grupo=(l,items)=>`<div class="opt-g"><span class="opt-l">${l}</span>${items.map(([k,t])=>`<button type="button" data-op="${esc(k)}">${esc(t)}</button>`).join("")}</div>`;
+  return grupo("Mensajes", OPC)
+    + grupo("Objeciones", MSG.filter(m=>m.g==="obj").map(m=>[m.k,m.k]))
+    + grupo("Cierre · Renata", MSG.filter(m=>m.g==="cierre").map(m=>[m.k,m.k]));
+}
 function renderMensajes(){
   if(SB && !PF) cargarPerfiles();
   $("#estilo-box").hidden = !!SB && !ADMIN;
@@ -1746,10 +1758,11 @@ function renderChat(){
   const nom=miNombre(), cur=LEADS[CURLEAD];
   const djs=Object.values(LEADS).sort((a,b)=>(b.upd||"").localeCompare(a.upd||"")).slice(0,8);
   const hola = CHAT.length ? "" : `<div class="hero-chat"><h2>Hola${nom?`, ${esc(nom)}`:""} 👋</h2>
-    <p>${cur?`Charla con <b>@${esc(cur.user)}</b>. Escribí abajo qué te respondió y te armo el próximo mensaje.`:`¿Con qué DJ hablamos? Elegilo y contame qué te respondió.`}</p>
-    ${!cur&&djs.length?`<div class="chips">${djs.map(L=>`<button type="button" data-dj="${L.id}">@${esc(L.user)}</button>`).join("")}</div>`:""}
-    ${SAMPLE?"":`<p class="sub">La IA no está disponible acá: usá los mensajes rápidos.</p>`}</div>`;
-  log.innerHTML = hola + CHAT.map((m,i)=> m.de==="dj"
+    <p>${cur?`Charla con <b>@${esc(cur.user)}</b>. `:""}Escribí abajo qué te respondió el DJ y te armo el próximo mensaje. Si querés las opciones de mensajes, pedímelas: "quiero responderle…".</p>
+    ${SAMPLE?"":`<p class="sub">La IA no está disponible acá.</p>`}</div>`;
+  log.innerHTML = hola + CHAT.map((m,i)=> m.opts
+    ? `<div class="b bot"><span class="who-l">Opciones</span><div class="t opts-t">${opcionesHTML()}</div></div>`
+    : m.de==="dj"
     ? `<div class="b me"><span class="who-l">El DJ dijo</span><div class="t">${esc(m.txt)}</div></div>`
     : `<div class="b bot"><span class="who-l">${esc(m.k?(MK[m.k]?.t||m.k):"Respuesta sugerida")}</span><div class="t">${m.txt?esc(m.txt):`<span class="sub">Pensando…</span>`}</div>
         ${m.txt?`<div class="b-acts"><button class="btn sm" data-cc="${i}">Copiar</button>${m.k&&MK[m.k]?.nota?`<span class="note">${esc(MK[m.k].nota)}</span>`:""}</div>`:""}</div>`).join("");
@@ -1798,6 +1811,7 @@ $("#m-nombre").addEventListener("change", ()=>{
 $("#m-lugar").addEventListener("change", guardarCharla);
 $("#c-opts").addEventListener("click", e=>{ const b=e.target.closest("[data-op]"); if(b) agregarPlantilla(b.dataset.op); });
 $("#c-log").addEventListener("click", e=>{
+  const op=e.target.closest("[data-op]"); if(op){ agregarPlantilla(op.dataset.op); return; }
   const d=e.target.closest("[data-dj]"); if(d){ const L=LEADS[d.dataset.dj]; if(L) elegirDJ(L); return; }
   const b=e.target.closest("[data-cc]"); if(b) copiar(CHAT[+b.dataset.cc].txt, b);
 });
@@ -1859,6 +1873,9 @@ $("#cv-list").addEventListener("click", e=>{
 });
 $("#c-form").addEventListener("submit", e=>{
   e.preventDefault(); const v=$("#c-text").value.trim(); if(!v||PENSANDO) return;
+  // "quiero responderle…", "opciones", "plantillas": muestra las opciones de siempre dentro del chat
+  if(/respond(er|erle|erles)\b|opcion|plantilla|r[aá]pid/i.test(v)){
+    CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", opts:true}); $("#c-text").value=""; renderChat(); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }
   $("#c-text").value=""; responderIA(v);
 });

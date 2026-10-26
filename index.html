@@ -469,6 +469,15 @@ select option{background:var(--surface);color:var(--ink)}
 .lupa .btn{padding:7px 12px}
 #hoy-lupa{margin-bottom:14px;padding:12px 14px}
 .prio.sin{color:var(--muted);font-weight:600}
+/* notas: letra finita celeste, se leen de un vistazo debajo de cada DJ */
+.nota-in{display:block;width:100%;min-width:200px;margin-top:3px;border:0;border-bottom:1px dashed transparent;background:none;padding:2px 0;font:300 13px var(--f-body);color:#5fd0ee}
+.nota-in::placeholder{color:var(--muted);opacity:.6}
+.nota-in:hover,.nota-in:focus{border-bottom-color:#5fd0ee;outline:0}
+:root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
+.nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
+.tick{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-brd);background:none;color:var(--muted);font-size:15px;font-weight:700;cursor:pointer;display:grid;place-items:center}
+.tick:hover{border-color:var(--ok);color:var(--ok)}
+.tick.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .prio{display:inline-block;font:700 11.5px var(--f-body);padding:2px 9px;border-radius:99px;border:1px solid var(--glass-brd);color:var(--muted)}
 .prio.alta{background:var(--ok-soft);color:var(--ok);border-color:transparent}
 .prio.media{background:var(--warn-soft);color:var(--warn);border-color:transparent}
@@ -685,7 +694,7 @@ select option{background:var(--surface);color:var(--ink)}
       <select id="l-pais" aria-label="Filtrar por país"><option value="">Todos los países</option></select>
     </div>
     <div class="funnel" id="l-funnel"></div>
-    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Estado</th><th>Seguid.</th><th>Bio</th><th>Fuente</th><th>1er DM</th><th>Próximo</th><th>Notas</th></tr></thead><tbody id="l-body"></tbody></table></div>
+    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Estado</th><th>Seguid.</th><th>Bio</th><th>Fuente</th><th>1er DM</th><th>Próximo</th><th>Respondió</th></tr></thead><tbody id="l-body"></tbody></table></div>
   </section>
 
   <!-- MENSAJES (chat) -->
@@ -1235,7 +1244,7 @@ function render(){
   $("#b-leads").textContent = Object.keys(LEADS).length || "";
   $("#b-resp").textContent = Object.values(LEADS).filter(L=>["respondio","planes"].includes(L.estado) && !L.ya).length || "";
   pageHead();
-  if(TAB==="hoy"){ renderHoy(); renderLeads(); }
+  if(TAB==="hoy"){ renderHoy(); if(!document.activeElement?.matches?.(".nota-in")) renderLeads(); }
   if(TAB==="respuestas" && !document.activeElement?.matches?.("[data-said]")) renderRespuestas();
   if(TAB==="mensajes") renderLista();
   if(TAB==="cargar") renderCargarSide();
@@ -1271,7 +1280,7 @@ function rowHTML(L, acts, extraTag="", below=null){
   return `<div class="row" data-id="${L.id}">${avatar(L)}
     <div class="who"><div class="l1"><button class="u" data-act="open">@${esc(L.user)}</button><span class="meta">· ${esc(PAIS[L.pais]?.n||L.pais||"–")}</span>${prioTag(L)}${extraTag}
       <button class="star ${L.top?"on":""}" data-act="star" title="Top 5 para vista previa" aria-label="Top 5">★</button></div>
-      ${below ?? (meta?`<div class="meta">${esc(meta)}</div>`:"")}</div>
+      ${below ?? (meta?`<div class="meta">${esc(meta)}</div>`:"")}${L.notas?`<div class="nota-txt">${esc(L.notas)}</div>`:""}</div>
     <div class="acts"><a class="btn sm" href="${ig(L.user)}" target="_blank" rel="noopener">Abrir IG ↗</a>${acts}</div></div>`;
 }
 
@@ -1345,12 +1354,27 @@ document.addEventListener("toggle", e=>{
   const o=JSON.parse(sessionGet("open")||"{}"); o[d.dataset.blk]=d.open; sessionSet("open",JSON.stringify(o));
 }, true);
 
+const RESP_OK=["respondio","planes","quiere","cerrado"];
+// nota escrita directo debajo de cada DJ
+document.addEventListener("change", e=>{
+  const id=e.target.dataset?.nota; if(!id) return; const L=LEADS[id]; if(!L) return;
+  store.put({...L, notas:e.target.value.trim(), upd:hoy()});
+});
 /* acciones en filas (Hoy + recientes) */
 document.addEventListener("click", e=>{
   const row=e.target.closest(".row[data-id], tr[data-id]"); if(!row) return;
   const L=LEADS[row.dataset.id]; if(!L) return;
   const b=e.target.closest("button");
-  if(row.tagName==="TR"){ openDrawer(L.id); return; }
+  if(row.tagName==="TR"){
+    if(e.target.closest(".nota-in")) return;
+    if(b?.hasAttribute("data-tick")){
+      if(!RESP_OK.includes(L.estado)) setEstado(L,"respondio");
+      else if(L.estado==="respondio") setEstado(L, L.dm?"enviado":"nuevo");
+      else toast("Ya avanzó más: cambialo desde su ficha");
+      return;
+    }
+    openDrawer(L.id); return;
+  }
   if(!b) return;
   if(b.dataset.act==="open") openDrawer(L.id);
   else if(b.dataset.act==="star") store.put({...L, top:!L.top});
@@ -1395,7 +1419,9 @@ function initCargar(){
     if(LEADS[id]){ toast("Ese DJ ya está cargado"); openDrawer(id); return; }
     const sm=raw.match(/([\d][\d.,]*\s?[kKmM]?)\s*(?:seguidores|followers)/i);
     const bio=/linktr\.?ee/i.test(raw)?"Linktree":/drive\.google|docs\.google/i.test(raw)?"Drive":null;
-    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Lupa", nombre:$("#lupa-q").value.trim(), lugar:"", seguidores:sm?sm[1].replace(/\s/g,"").toLowerCase():"", notas:"", top:false,
+    // nombre: el que escribió en la lupa; si no, se arma con el @ (julirossi.dj → Julirossi)
+    const nom=$("#lupa-q").value.trim() || (u.split(/[._]+/).find(p=>p && !/^(dj|music|musica|oficial|official|ok)$/.test(p).valueOf() && /[a-z]/.test(p))||u).replace(/\d+/g,"").replace(/^./,c=>c.toUpperCase());
+    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Presskit actual", nombre:nom, lugar:"", seguidores:sm?sm[1].replace(/\s/g,"").toLowerCase():"", notas:"", top:false,
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
@@ -1440,7 +1466,7 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}</td><td class="mono">${esc(L.pais)}</td><td><span class="est ${L.estado}">${esc(EST[L.estado])}</span></td><td class="mono">${esc(L.seguidores||"")}</td><td>${esc(L.bio||"")}</td><td>${esc(L.fuente||"")}</td><td class="mono">${L.dm?corta(L.dm):"–"}</td><td>${esc(proximoTxt(L))}</td><td class="notes">${esc(L.notas||"")}</td></tr>`).join("")
+  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><span class="est ${L.estado}">${esc(EST[L.estado])}</span></td><td class="mono">${esc(L.seguidores||"")}</td><td>${esc(L.bio||"")}</td><td>${esc(L.fuente||"Presskit actual")}</td><td class="mono">${L.dm?corta(L.dm):"–"}</td><td>${esc(proximoTxt(L))}</td><td><button type="button" class="tick ${RESP_OK.includes(L.estado)?"on":""}" data-tick aria-pressed="${RESP_OK.includes(L.estado)}" title="Respondió" aria-label="Respondió">✓</button></td></tr>`).join("")
     : `<tr><td colspan="9" class="sub" style="padding:18px">No hay DJs con ese filtro.</td></tr>`;
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
@@ -1682,10 +1708,9 @@ function openDrawer(id){
       <div class="acts"><button class="btn pri sm" data-dcopy="${esc(sug)}">Copiar</button>${pasos.filter(k=>k!==sug).map(k=>`<button class="btn sm" data-dcopy="${esc(k)}">${esc(k)}</button>`).join("")}</div></div>`:""}
     <div class="two">
       <div class="field"><label for="d-nombre">Nombre</label><input type="text" id="d-nombre" data-f="nombre" value="${esc(L.nombre||"")}"></div>
-      <div class="field"><label for="d-lugar">Dónde tocó</label><input type="text" id="d-lugar" data-f="lugar" value="${esc(L.lugar||"")}"></div>
       <div class="field"><label for="d-seg">Seguidores</label><input type="text" id="d-seg" data-f="seguidores" value="${esc(L.seguidores||"")}"></div>
       <div class="field"><label for="d-pais">País</label><select id="d-pais" data-f="pais">${PAISES.map(p=>`<option value="${p.c}" ${p.c===L.pais?"selected":""}>${p.n}</option>`).join("")}</select></div>
-      <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"")}" list="fuentes"></div>
+      <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"Presskit actual")}" list="fuentes"></div>
       <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio">${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>
     </div>
     <div class="field"><label for="d-notas">Notas</label><textarea id="d-notas" data-f="notas">${esc(L.notas||"")}</textarea></div>

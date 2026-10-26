@@ -476,6 +476,9 @@ select option{background:var(--surface);color:var(--ink)}
 :root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
 .nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
 #l-funnel{display:none}
+.ct-ia{margin-bottom:14px;padding:14px 16px}
+.ct-ia textarea{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--ink);background:#fff}
+.ci-out{margin-top:12px;white-space:pre-wrap;line-height:1.55;font-size:14.5px}
 /* Mensajes estilo chat: ancho, saludo grande y barra de escritura abajo; sin lista de conversaciones (no se guardan) */
 .convs[hidden]{display:none}
 .side-foot{font-size:0}
@@ -661,7 +664,7 @@ th.c,td.c{text-align:center}
     <button data-tab="leads" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M1.5 21c0-4 3.4-7 7.5-7s7.5 3 7.5 7"/><path d="M16 4a4 4 0 0 1 0 8M22.5 21c0-3-1.8-5.4-4.5-6.5"/></svg><span>Todos</span><em class="badge soft" id="b-leads"></em></button>
     <button data-tab="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg><span>Mensajes</span></button>
     <button data-tab="reporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Reporte</span></button>
-    <button data-tab="contenido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Contenido</span></button>
+    <button data-tab="contenido" id="tab-contenido" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Contenido</span></button>
     <button data-tab="perfiles" id="tab-perfiles" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Usuarios</span></button>
   </nav>
   <div class="side-foot">Atajos: teclas 1 a 8 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="mi-palabra" hidden>Palabra secreta</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
@@ -797,6 +800,18 @@ th.c,td.c{text-align:center}
 
   <!-- PERFILES (versión web) -->
   <section id="v-contenido" hidden>
+    <div class="card ct-ia">
+      <h2>Ideas que funcionan</h2>
+      <form class="lupa" id="ci-f"><input type="search" id="ci-q" placeholder="Ej: reels de DJs que mostraron su presskit" aria-label="Buscar ideas" autocomplete="off">
+        <button class="btn pri" type="submit" id="ci-go" aria-label="Buscar ideas"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button></form>
+      <div class="ci-out" id="ci-out" hidden></div>
+    </div>
+    <div class="card ct-ia">
+      <h2>DJs que comentan</h2>
+      <div class="sub">Pegá los comentarios de un post que funcionó: los @ de DJs pasan a tu CRM.</div>
+      <textarea id="cc-txt" rows="3" placeholder="Pegá acá los comentarios…"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn pri" type="button" id="cc-go">Armar mi lista</button><span class="sub" id="cc-msg"></span></div>
+    </div>
     <div class="chips" id="ct-sem"></div>
     <div class="sub ct-prog" id="ct-prog"></div>
     <div id="ct-cal"></div>
@@ -925,7 +940,7 @@ async function copiar(texto, btn){
 }
 
 /* ---------- mensajes ---------- */
-function tonoDe(L){ return (PAIS[L.pais]||PAIS.EN).t; }
+function tonoDe(L){ const t=(PAIS[L.pais]||PAIS.EN).t; return t==="en" ? "tu" : t; }   // sin inglés: nadie habla en inglés
 function ctx(L){
   const n=(L.nombre||"").trim();
   return { n, lugar:(L.lugar||"").trim(), hola: n?`Hola ${n}!`:"Hola!", hey: n?`Hey ${n}!`:"Hey!", plan: L.plan||"Professional", dias: CFG.dias||7 };
@@ -1605,7 +1620,7 @@ function renderMensajes(){
   if(document.activeElement!==$("#estilo-txt")) $("#estilo-txt").value=CFG.estilo||"";
   renderLista();
   $("#m-djs").innerHTML = Object.values(LEADS).map(L=>`<option value="@${esc(L.user)}">${esc([L.nombre, PAIS[L.pais]?.n].filter(Boolean).join(" · "))}</option>`).join("");
-  $("#m-tono").innerHTML = [["vos","Argentina · vos"],["tu","Resto · tú"],["en","Inglés"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${MT===v}">${l}</button>`).join("");
+  $("#m-tono").innerHTML = [["vos","Argentina · vos"],["tu","Resto · tú"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${MT===v}">${l}</button>`).join("");
   const grupo=(l,items)=>`<div class="opt-g"><span class="opt-l">${l}</span>${items.map(([k,t])=>`<button type="button" data-op="${esc(k)}">${esc(t)}</button>`).join("")}</div>`;
   $("#c-opts").innerHTML = grupo("Mensajes", OPC)
     + grupo("Objeciones", MSG.filter(m=>m.g==="obj").map(m=>[m.k,m.k]))
@@ -1634,7 +1649,7 @@ async function responderIA(dijo){
   CHAT.push({de:"dj", txt:dijo});
   const slot={de:"setter", txt:""}; CHAT.push(slot); renderChat();
   PENSANDO=true; $("#c-send").disabled=true;
-  const tono = MT==="vos"?"español rioplatense con vos (Argentina)":MT==="tu"?"español neutro con tú":"inglés";
+  const tono = MT==="vos"?"español rioplatense con vos (Argentina)":"español neutro con tú";
   const lib = ["/p1","/p2","/p3","/p4","/web","/planes","/wsp","¿Cuánto sale?","Tengo Linktree / Canva","Tengo web de plantilla","Ahora no","No tengo plata","Pasame info"]
     .map(k=>`${k}: ${texto(k,chatLead(),MT)}`).join("\n");
   const charla = CHAT.slice(0,-1).map(m=>`${m.de==="dj"?"DJ":"Setter"}: ${m.txt}`).join("\n");
@@ -1995,8 +2010,29 @@ $("#v-contenido").addEventListener("change",e=>{
 });
 
 /* ---------- pestañas y atajos ---------- */
+// Contenido: solo para Renata
+$("#cc-go").addEventListener("click", async ()=>{
+  const txt=$("#cc-txt").value; const users=[...new Set([...txt.matchAll(/instagram\.com\/([\w.]+)|@([\w.]{2,30})/gi)].map(m=>limpiarUser(m[1]||m[2])).filter(u=>u && !/^(p|reel|reels|explore|stories)$/.test(u)))];
+  if(!users.length){ $("#cc-msg").textContent="No encontré ningún @."; return; }
+  let nuevos=0;
+  for(const u of users){ const id=idDe(u); if(LEADS[id]) continue;
+    const L={id, user:u, pais:F.pais, bio:"", fuente:"Comentó un post", nombre:"", lugar:"", seguidores:"", notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), prio:"sin", ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
+    await store.put(L); nuevos++; }
+  $("#cc-msg").textContent=`${nuevos} DJs nuevos en tu CRM${users.length-nuevos?` (${users.length-nuevos} ya estaban)`:""}`; $("#cc-txt").value="";
+});
+$("#ci-f").addEventListener("submit", async e=>{
+  e.preventDefault(); const q=$("#ci-q").value.trim(); const out=$("#ci-out"); out.hidden=false;
+  if(!SAMPLE){ out.textContent="La IA no está disponible acá."; return; }
+  out.textContent="Buscando…"; $("#ci-go").disabled=true;
+  try{
+    const r=await SAMPLE(`Soy Renata, DJ argentina (melodic techno). Con Playskit hago webs presskit a medida para DJs y vendo por Instagram y TikTok. Buscá en la web ideas de contenido (reels, carruseles, historias) de cuentas de DJs, de diseño y de presskits que estén funcionando ahora${q?`, sobre: ${q}`:""}. Después adaptá las mejores a lo que hago yo: dame 5 ideas, cada una con gancho (primera frase), formato, qué mostrar y por qué funciona. Español rioplatense, corto y concreto.`, {search:true});
+    out.textContent=r.text||"No me salió nada. Probá de nuevo.";
+  }catch(err){ out.textContent=err.message||"No pude buscar ahora."; }
+  $("#ci-go").disabled=false;
+});
 function setTab(t){
   if(t==="cargar"||t==="leads") t="hoy";   // cargar y ver todos los DJs ahora viven dentro del CRM
+  if(t==="contenido" && SB && !ADMIN) t="hoy";   // Contenido es solo de Renata
   TAB=t; document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
   document.querySelectorAll("main>section").forEach(s=>s.hidden = s.id!=="v-"+t);
   try{ localStorage.setItem("cs-tab",t); }catch{}
@@ -2021,6 +2057,7 @@ document.addEventListener("keydown", e=>{
     const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
     if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
     ADMIN = yo.rol==="admin";
+    $("#tab-contenido").hidden = !ADMIN;
     if(ADMIN){ await cargarEquipo(); cargarDuplicados(); setInterval(cargarDuplicados, 60000); }
     store = supaStore(sb);
     $("#tab-perfiles").hidden=false;
@@ -2038,14 +2075,15 @@ document.addEventListener("keydown", e=>{
     };
     $("#logout").onclick = async()=>{ await sb.auth.signOut(); location.reload(); };
   } else {
+    $("#tab-contenido").hidden=false;
     let db=null;
     try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch{}
     store = db ? dbStore(db) : localStore();
   }
   if(SB){
     // versión web: la IA es la función "chat" de Supabase (usa la clave de OpenAI guardada ahí, nadie la ve)
-    SAMPLE = async prompt=>{
-      const {data, error} = await SB.functions.invoke("chat", {body:{prompt}});
+    SAMPLE = async (prompt, opts)=>{
+      const {data, error} = await SB.functions.invoke("chat", {body:{prompt, search:!!opts?.search}});
       if(error){ let m="No pude conectar con la IA."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
       return {text:data.text};
     };

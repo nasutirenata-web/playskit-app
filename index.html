@@ -476,7 +476,11 @@ select option{background:var(--surface);color:var(--ink)}
 :root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
 .nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
 #l-funnel{display:none}
-/* Mensajes estilo chat: ancho, saludo grande y barra de escritura abajo */
+/* Mensajes estilo chat: ancho, saludo grande y barra de escritura abajo; sin lista de conversaciones (no se guardan) */
+.convs[hidden]{display:none}
+.side-foot{font-size:0}
+.msgwrap{grid-template-columns:minmax(0,1fr)}
+#c-new{margin-left:auto}
 .chatwrap{max-width:none}
 .hero-chat{margin:auto;text-align:center;max-width:560px;padding:30px 10px}
 .hero-chat h2{font-size:32px;margin-bottom:8px}
@@ -560,6 +564,52 @@ th.c,td.c{text-align:center}
 .ct-idea{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--glass-brd);font-size:14.5px}
 .ct-idea em{margin-left:auto;font-size:12px;color:var(--muted);font-style:normal;white-space:nowrap}
 @media (max-width:700px){.ct-dia{grid-template-columns:minmax(0,1fr);gap:4px}.ct-dn{flex-direction:row;align-items:baseline;gap:10px;padding-top:6px}.ct-card{flex-basis:84%}}
+/* ===== Estilo limpio y claro (por defecto): fondo gris suave, tarjetas blancas, líneas finas, pastillas, negro como acento ===== */
+:root[data-bg="claro"]{
+  --bg:#f3f4f8; --surface:#ffffff; --side:#ffffff; --ink:#12141a; --muted:#8890a0; --line:#e8ebf1; --chip:#f1f3f8;
+  --accent:#0c8a94; --accent-soft:#e3f6f8; --r:18px;
+  --glass:#ffffff; --glass-2:#f6f7fb; --glass-brd:#e8ebf1; --glass-hi:transparent; --shadow:rgba(20,24,40,.06)}
+:root[data-bg="claro"] .glow{display:none}
+:root[data-bg="claro"] .side,:root[data-bg="claro"] .topbar{background:#ffffff !important;border-color:var(--line) !important}
+:root[data-bg="claro"] .block,:root[data-bg="claro"] .card,:root[data-bg="claro"] .tile,:root[data-bg="claro"] .chk,
+:root[data-bg="claro"] .msg,:root[data-bg="claro"] .tablewrap,:root[data-bg="claro"] details.more,:root[data-bg="claro"] .convs,
+:root[data-bg="claro"] .chat-log,:root[data-bg="claro"] .hero-chat{background:#ffffff !important;border:1px solid var(--line) !important;
+  box-shadow:0 1px 2px rgba(20,24,40,.04),0 8px 24px rgba(20,24,40,.04) !important;-webkit-backdrop-filter:none;backdrop-filter:none}
+:root[data-bg="claro"] .hero-chat{border:0 !important;box-shadow:none !important}
+:root[data-bg="claro"] #tabs button{border-radius:999px;border-bottom:0;font-weight:500;color:var(--muted);padding:9px 16px}
+:root[data-bg="claro"] #tabs button:hover{background:var(--chip);color:var(--ink)}
+:root[data-bg="claro"] #tabs button[aria-selected="true"]{background:#12141a;color:#ffffff;box-shadow:none}
+:root[data-bg="claro"] #tabs .badge{background:#ffffff;color:#12141a}
+:root[data-bg="claro"] .btn,:root[data-bg="claro"] .chips button,:root[data-bg="claro"] .funnel button,:root[data-bg="claro"] .states button,
+:root[data-bg="claro"] .cities a{background:#ffffff;border:1px solid var(--line);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+:root[data-bg="claro"] .btn:hover,:root[data-bg="claro"] .chips button:hover{background:var(--chip)}
+:root[data-bg="claro"] .btn.pri{background:#12141a;color:#ffffff;border-color:#12141a;box-shadow:none}
+:root[data-bg="claro"] .btn.pri:hover{background:#2a2d38}
+:root[data-bg="claro"] .btn.ghost{background:none;border-color:transparent}
+:root[data-bg="claro"] .chips button[aria-pressed="true"]{background:#12141a;color:#ffffff;border-color:#12141a}
+:root[data-bg="claro"] input[type=text],:root[data-bg="claro"] input[type=date],:root[data-bg="claro"] input[type=search],
+:root[data-bg="claro"] input[type=email],:root[data-bg="claro"] input[type=password],:root[data-bg="claro"] select,:root[data-bg="claro"] textarea{
+  background:#ffffff !important;border:1px solid var(--line) !important;border-radius:12px !important}
+:root[data-bg="claro"] .lupa input,:root[data-bg="claro"] .chat-in textarea{background:#ffffff !important}
+:root[data-bg="claro"] .chat-in{background:#ffffff;border:1px solid var(--line);box-shadow:0 4px 16px rgba(20,24,40,.06)}
+:root[data-bg="claro"] .chat-in textarea{border:0 !important}
+:root[data-bg="claro"] .b.bot .t{background:#f4f5f9;border:0}
+:root[data-bg="claro"] .b.me .t{background:#12141a;color:#ffffff;border:0}
+:root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
+:root[data-bg="claro"] th{font-size:11.5px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+:root[data-bg="claro"] td,:root[data-bg="claro"] th{border-bottom:1px solid var(--line)}
+:root[data-bg="claro"] tr.click:hover td{background:#f8f9fc}
+:root[data-bg="claro"] .sync,:root[data-bg="claro"] .theme{background:#ffffff !important;border:1px solid var(--line) !important}
+:root[data-bg="claro"] .theme button[aria-pressed="true"]{background:var(--chip)}
+:root[data-bg="claro"] .tick.on{background:#16a34a;border-color:#16a34a}
+:root[data-bg="claro"] .prio.alta{background:#dcfce7;color:#15803d}
+:root[data-bg="claro"] .prio.media{background:#fef3c7;color:#a16207}
+:root[data-bg="claro"] .prio.baja{background:#f1f3f8}
+:root[data-bg="claro"] .est{border-radius:999px}
+:root[data-bg="claro"] .cv:hover,:root[data-bg="claro"] .cv.on{background:#f4f5f9}
+:root[data-bg="claro"] h1,:root[data-bg="claro"] .topbar h1{font-weight:700;letter-spacing:-.02em}
+:root[data-bg="claro"] .topbar .sub{color:var(--muted)}
+:root[data-bg="claro"] main{max-width:1280px}
 </style>
 
 <div class="login" id="login" hidden>
@@ -714,8 +764,8 @@ th.c,td.c{text-align:center}
   <!-- MENSAJES (chat) -->
   <section id="v-mensajes" hidden>
     <div class="msgwrap">
-    <div class="convs">
-      <div class="convs-top"><b>Conversaciones</b><button class="btn sm pri" id="c-new">+ Nueva</button></div>
+    <div class="convs" hidden>
+      <div class="convs-top"><b>Conversaciones</b></div>
       <div class="convs-sum" id="cv-sum"></div>
       <div class="chips convs-f" id="cv-f"></div>
       <div class="cv-list" id="cv-list"></div>
@@ -725,6 +775,7 @@ th.c,td.c{text-align:center}
         <input type="text" id="m-nombre" list="m-djs" placeholder="Elegí el DJ: escribí su @" aria-label="DJ"><datalist id="m-djs"></datalist>
         <input type="text" id="m-lugar" placeholder="Dónde tocó" aria-label="Dónde tocó" hidden>
         <span class="opt-l">Cómo le hablás</span><div class="chips" id="m-tono"></div>
+        <button class="btn sm" type="button" id="c-new">+ Chat nuevo</button>
       </div>
       <div class="chat-log" id="c-log" aria-live="polite"></div>
       <form class="chat-in" id="c-form">
@@ -1596,6 +1647,7 @@ $("#c-new").addEventListener("click", ()=>{ CUR=null; CURLEAD=null; CHAT=[]; $("
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado
 function guardarCharla(){
+  return;   // el chat ya no se guarda: el avance de cada DJ se marca con los tildes del CRM
   const nombre=$("#m-nombre").value.trim(), lugar=$("#m-lugar").value.trim();
   const msgs=CHAT.filter(m=>m.txt).map(m=>({de:m.de, txt:m.txt, ...(m.k?{k:m.k}:{})}));
   if(!msgs.length && !nombre) return;
@@ -1715,10 +1767,10 @@ $("#c-com").addEventListener("change", e=>store.cfg({com:+e.target.value.replace
 function setBg(v){
   if(v) document.documentElement.dataset.bg=v; else delete document.documentElement.dataset.bg;
   document.querySelectorAll("#bg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===v));
-  try{ localStorage.setItem("cs-bg",v); }catch{}
+  try{ localStorage.setItem("cs-bg2",v); }catch{}
 }
 $("#bg").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) setBg(b.dataset.v); });
-{ let v="gris"; try{ v=localStorage.getItem("cs-bg")||"gris"; }catch{} setBg(["claro","gris","negro"].includes(v)?v:"gris"); }
+{ let v="claro"; try{ v=localStorage.getItem("cs-bg2")||"claro"; }catch{} setBg(["claro","gris","negro"].includes(v)?v:"claro"); }
 $("#r-dia").value=hoy();
 $("#r-dia").addEventListener("change", renderReporte);
 $("#r-copy").addEventListener("click", e=>copiar(reporteTxt($("#r-dia").value||hoy()), e.currentTarget));

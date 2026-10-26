@@ -685,6 +685,7 @@ th.c,td.c{text-align:center}
         <button class="btn pri" type="submit" aria-label="Buscar en Instagram"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button></form>
       <form class="lupa" id="lupa-g" style="margin-top:8px"><input type="text" id="lupa-pega" placeholder="2 · Pegá su perfil y se carga solo" aria-label="Perfil de Instagram" autocomplete="off"></form>
     </div>
+    <div class="card" id="dup-box" hidden style="margin-bottom:14px"><h2>DJs repetidos</h2><div id="dup-list" class="sub" style="margin:8px 0"></div><button class="btn sm" type="button" id="dup-ok">Listo, ya vi</button></div>
     <div class="today-top" hidden>
       <div class="meter">
         <div class="sub" id="hoy-meta-txt"></div>
@@ -910,7 +911,7 @@ function prioDe(L){
 }
 const prioTag=(L,big)=>{ const p=prioDe(L); return `<span class="prio ${p.k} ${big?"big":""}">${p.n}</span>`; };
 let toastT;
-function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,1800); }
+function toast(t, ms=1800){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,ms); }
 async function copiar(texto, btn){
   try { await navigator.clipboard.writeText(texto); }
   catch {
@@ -1494,7 +1495,13 @@ function initCargar(){
     const u=limpiarUser(tok); if(!u){ toast("No encontré el @"); return; }
     $("#lupa-pega").value="";
     const id=idDe(u);
-    if(LEADS[id]){ toast("Ese DJ ya está cargado"); openDrawer(id); return; }
+    if(LEADS[id]){
+      const d=LEADS[id].dueno&&LEADS[id].dueno.toLowerCase()!==YO ? nomMail(LEADS[id].dueno) : "";
+      toast(d?`Este DJ ya está cargado en la cuenta de ${d}`:"Ese DJ ya está cargado", 3500); openDrawer(id); return; }
+    if(SB){   // ¿lo tiene otra setter? (cada una ve solo lo suyo, así que se lo pregunta a Supabase, que además le avisa a Renata)
+      const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u});
+      if(otra){ toast(`Este DJ ya está cargado en la cuenta de ${otra}`, 3500); return; }
+    }
     const sm=raw.match(/([\d][\d.,]*\s?[kKmM]?)\s*(?:seguidores|followers)/i);
     const bio=/linktr\.?ee/i.test(raw)?"Linktree":/drive\.google|docs\.google/i.test(raw)?"Drive":null;
     // nombre: el que escribió en la lupa; si no, se arma con el @ (julirossi.dj → Julirossi)
@@ -1569,6 +1576,22 @@ function elegirDJ(L){
   CUR=null; CHAT=[]; CURLEAD=L.id; MT=tonoDe(L);
   $("#m-nombre").value="@"+L.user; $("#m-lugar").value=L.lugar||"";
   renderMensajes(); guardarCharla();
+}
+// nombre de una cuenta a partir de su mail (el del equipo si está cargado; si no, lo de antes de la @)
+function nomMail(m){
+  m=(m||"").toLowerCase();
+  const e=EQ?.find(p=>p.email.toLowerCase()===m)||PF?.perfiles?.find(p=>p.email.toLowerCase()===m);
+  return e?.nombre || (m.split("@")[0]||"otra cuenta").replace(/^./,c=>c.toUpperCase());
+}
+// aviso para Renata: quién intentó cargar un DJ que ya tenía otra cuenta
+async function cargarDuplicados(){
+  if(!SB || !ADMIN) return;
+  const {data}=await SB.from("duplicados").select("*").order("creado",{ascending:false}).limit(20);
+  let visto=""; try{ visto=localStorage.getItem("cs-dup-visto")||""; }catch{}
+  const nuevos=(data||[]).filter(d=>d.creado>visto).slice(0,5);
+  $("#dup-box").hidden=!nuevos.length;
+  $("#dup-list").innerHTML=nuevos.map(d=>`<div><b>${esc(nomMail(d.intento))}</b> quiso cargar <b>@${esc(d.dj)}</b>, que ya tiene <b>${esc(nomMail(d.dueno))}</b></div>`).join("");
+  if(nuevos.length) $("#dup-ok").onclick=()=>{ try{ localStorage.setItem("cs-dup-visto", nuevos[0].creado); }catch{} $("#dup-box").hidden=true; };
 }
 function miNombre(){
   const p=PF?.perfiles?.find(p=>p.email.toLowerCase()===YO); if(p?.nombre) return p.nombre;
@@ -1998,6 +2021,7 @@ document.addEventListener("keydown", e=>{
     const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
     if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
     ADMIN = yo.rol==="admin";
+    if(ADMIN){ await cargarEquipo(); cargarDuplicados(); setInterval(cargarDuplicados, 60000); }
     store = supaStore(sb);
     $("#tab-perfiles").hidden=false;
     $("#logout").hidden=false; $("#cambiar-clave").hidden=false; $("#mi-palabra").hidden=false;

@@ -476,6 +476,19 @@ select option{background:var(--surface);color:var(--ink)}
 :root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
 .nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
 #l-funnel{display:none}
+/* Mensajes estilo chat: ancho, saludo grande y barra de escritura abajo */
+.chatwrap{max-width:none}
+.hero-chat{margin:auto;text-align:center;max-width:560px;padding:30px 10px}
+.hero-chat h2{font-size:32px;margin-bottom:8px}
+.hero-chat p{color:var(--muted);font-size:16px;margin:0 0 16px}
+.hero-chat .chips{justify-content:center}
+.chat-in{background:var(--glass-2);border:1px solid var(--glass-brd);border-radius:26px;padding:6px 8px 6px 14px;align-items:center}
+.chat-in textarea{border:0 !important;background:none !important;min-height:40px;box-shadow:none !important;padding:10px 4px !important;resize:none}
+.chat-in .btn{width:42px;height:42px;padding:0;border-radius:50%;justify-content:center}
+details.rapidos{font-size:14px;color:var(--muted)}
+details.rapidos summary{cursor:pointer;padding:4px 2px}
+details.rapidos textarea{width:100%;margin-top:8px;border:1px solid var(--glass-brd);background:var(--glass-2);border-radius:14px;padding:10px 12px;color:var(--ink);font-size:14px}
+.b{max-width:min(720px,88%)}
 th.c,td.c{text-align:center}
 .tick{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-brd);background:none;color:var(--muted);font-size:15px;font-weight:700;cursor:pointer;display:grid;place-items:center}
 .tick:hover{border-color:var(--ok);color:var(--ok)}
@@ -710,15 +723,17 @@ th.c,td.c{text-align:center}
     <div class="chatwrap">
       <div class="chat-top">
         <input type="text" id="m-nombre" list="m-djs" placeholder="Elegí el DJ: escribí su @" aria-label="DJ"><datalist id="m-djs"></datalist>
-        <input type="text" id="m-lugar" placeholder="Dónde tocó" aria-label="Dónde tocó">
+        <input type="text" id="m-lugar" placeholder="Dónde tocó" aria-label="Dónde tocó" hidden>
         <span class="opt-l">Cómo le hablás</span><div class="chips" id="m-tono"></div>
       </div>
       <div class="chat-log" id="c-log" aria-live="polite"></div>
-      <div class="chat-opts" id="c-opts"></div>
       <form class="chat-in" id="c-form">
-        <textarea id="c-text" rows="2" placeholder="Pegá lo que te respondió el DJ y te armo la respuesta…"></textarea>
-        <button class="btn pri" type="submit" id="c-send">Responder</button>
+        <textarea id="c-text" rows="1" placeholder="Me respondió… (pegá lo que dijo el DJ)"></textarea>
+        <button class="btn pri" type="submit" id="c-send" aria-label="Enviar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
+      <details class="rapidos"><summary>Mensajes rápidos</summary><div class="chat-opts" id="c-opts"></div></details>
+      <details class="rapidos" id="estilo-box" hidden><summary>Estilo de contacto (solo Renata)</summary>
+        <textarea id="estilo-txt" rows="6" placeholder="Pegá acá cómo contactan Agus Cuenca y Alexis Assad: sus guiones, ejemplos de mensajes, reglas. La IA escribe en ese estilo."></textarea></details>
     </div>
     </div>
   </section>
@@ -1020,7 +1035,7 @@ async function cargarPerfiles(){
   if(!SB || PF_CARGANDO) return; PF_CARGANDO=true;
   const r = await equipo({accion:"perfiles"}); PF_CARGANDO=false;
   if(r.error){ toast(r.error); return; }
-  PF = r; if(TAB==="perfiles") renderPerfiles();
+  PF = r; if(TAB==="perfiles") renderPerfiles(); if(TAB==="mensajes") renderChat();
 }
 function numerosDe(mail){
   const L=Object.values(LEADS), C=Object.values(CHARLAS), es=x=>(x||"").toLowerCase()===mail;
@@ -1499,7 +1514,16 @@ function elegirDJ(L){
   $("#m-nombre").value="@"+L.user; $("#m-lugar").value=L.lugar||"";
   renderMensajes(); guardarCharla();
 }
+function miNombre(){
+  const p=PF?.perfiles?.find(p=>p.email.toLowerCase()===YO); if(p?.nombre) return p.nombre;
+  const e=EQ?.find(p=>p.email.toLowerCase()===YO); if(e?.nombre) return e.nombre;
+  if(YO){ const w=YO.split("@")[0].split(/[._\d]+/)[0]; return w.replace(/^./,c=>c.toUpperCase()); }
+  return "";
+}
 function renderMensajes(){
+  if(SB && !PF) cargarPerfiles();
+  $("#estilo-box").hidden = !!SB && !ADMIN;
+  if(document.activeElement!==$("#estilo-txt")) $("#estilo-txt").value=CFG.estilo||"";
   renderLista();
   $("#m-djs").innerHTML = Object.values(LEADS).map(L=>`<option value="@${esc(L.user)}">${esc([L.nombre, PAIS[L.pais]?.n].filter(Boolean).join(" · "))}</option>`).join("");
   $("#m-tono").innerHTML = [["vos","Argentina · vos"],["tu","Resto · tú"],["en","Inglés"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${MT===v}">${l}</button>`).join("");
@@ -1512,7 +1536,12 @@ function renderMensajes(){
 function renderChat(){
   const log=$("#c-log");
   $("#c-form").hidden = !SAMPLE;
-  const hola = `<div class="b bot"><div class="t">Tocá una opción de abajo para tener el mensaje listo, o pegá lo que te respondió el DJ y te escribo qué contestarle.${SAMPLE?"":`<br><span class="sub">La IA no está disponible acá: usá las opciones.</span>`}</div></div>`;
+  const nom=miNombre(), cur=LEADS[CURLEAD];
+  const djs=Object.values(LEADS).sort((a,b)=>(b.upd||"").localeCompare(a.upd||"")).slice(0,8);
+  const hola = CHAT.length ? "" : `<div class="hero-chat"><h2>Hola${nom?`, ${esc(nom)}`:""} 👋</h2>
+    <p>${cur?`Charla con <b>@${esc(cur.user)}</b>. Escribí abajo qué te respondió y te armo el próximo mensaje.`:`¿Con qué DJ hablamos? Elegilo y contame qué te respondió.`}</p>
+    ${!cur&&djs.length?`<div class="chips">${djs.map(L=>`<button type="button" data-dj="${L.id}">@${esc(L.user)}</button>`).join("")}</div>`:""}
+    ${SAMPLE?"":`<p class="sub">La IA no está disponible acá: usá los mensajes rápidos.</p>`}</div>`;
   log.innerHTML = hola + CHAT.map((m,i)=> m.de==="dj"
     ? `<div class="b me"><span class="who-l">El DJ dijo</span><div class="t">${esc(m.txt)}</div></div>`
     : `<div class="b bot"><span class="who-l">${esc(m.k?(MK[m.k]?.t||m.k):"Respuesta sugerida")}</span><div class="t">${m.txt?esc(m.txt):`<span class="sub">Pensando…</span>`}</div>
@@ -1534,7 +1563,7 @@ async function responderIA(dijo){
   const prompt = `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
 Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes cortos (máximo 3 líneas); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
-Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
+${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
 Mensajes modelo (adaptalos, no los copies igual):
 ${lib}
 
@@ -1546,7 +1575,7 @@ Escribí SOLO el próximo mensaje de la setter, listo para pegar en Instagram. S
     const r = await SAMPLE(prompt, {modelTier:"quick", cache:false, onText:({text})=>{ slot.txt=text; renderChat(); }});
     slot.txt = (r.text||"").trim() || "No me salió nada. Probá de nuevo.";
   }catch(e){
-    slot.txt = e?.code==="rate_limited" ? "Muchos pedidos seguidos. Esperá un minuto y probá de nuevo." : "No pude responder ahora. Usá las opciones de abajo.";
+    slot.txt = e?.code==="rate_limited" ? "Muchos pedidos seguidos. Esperá un minuto y probá de nuevo." : (e?.message && e.message!=="[object Object]" ? e.message+" Usá los mensajes rápidos mientras tanto." : "No pude responder ahora. Usá los mensajes rápidos.");
   }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
@@ -1557,7 +1586,11 @@ $("#m-nombre").addEventListener("change", ()=>{
 });
 $("#m-lugar").addEventListener("change", guardarCharla);
 $("#c-opts").addEventListener("click", e=>{ const b=e.target.closest("[data-op]"); if(b) agregarPlantilla(b.dataset.op); });
-$("#c-log").addEventListener("click", e=>{ const b=e.target.closest("[data-cc]"); if(b) copiar(CHAT[+b.dataset.cc].txt, b); });
+$("#c-log").addEventListener("click", e=>{
+  const d=e.target.closest("[data-dj]"); if(d){ const L=LEADS[d.dataset.dj]; if(L) elegirDJ(L); return; }
+  const b=e.target.closest("[data-cc]"); if(b) copiar(CHAT[+b.dataset.cc].txt, b);
+});
+$("#estilo-txt").addEventListener("change", e=>store.cfg({estilo:e.target.value.trim()}));
 $("#c-new").addEventListener("click", ()=>{ CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); });
 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
@@ -1928,7 +1961,14 @@ document.addEventListener("keydown", e=>{
     try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch{}
     store = db ? dbStore(db) : localStore();
   }
-  try{ SAMPLE = window.claude?.use ? await window.claude.use("sample") : null; }catch{ SAMPLE=null; }
+  if(SB){
+    // versión web: la IA es la función "chat" de Supabase (usa la clave de OpenAI guardada ahí, nadie la ve)
+    SAMPLE = async prompt=>{
+      const {data, error} = await SB.functions.invoke("chat", {body:{prompt}});
+      if(error){ let m="No pude conectar con la IA."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
+      return {text:data.text};
+    };
+  } else { try{ SAMPLE = window.claude?.use ? await window.claude.use("sample") : null; }catch{ SAMPLE=null; } }
   if(TAB==="mensajes") renderChat();
   let t="hoy"; try{ t=localStorage.getItem("cs-tab")||"hoy"; }catch{}
   setTab(["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles"].includes(t)?t:"hoy");

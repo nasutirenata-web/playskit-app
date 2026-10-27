@@ -1541,7 +1541,7 @@ function anotar(n, campo){ if(YO){ n.por={...(n.por||{})}; if(!n.por[campo]) n.p
 function setEstado(L, est, extra={}){
   const n={...L, ...extra, estado:est, upd:hoy()};
   const f=EST_FECHA[est]; if(f && !n[f]){ n[f]=hoy(); anotar(n, f); }
-  if(est==="respondio"){ n.resp=hoy(); n.ya=false; anotar(n, "resp"); }
+  if(est==="respondio"){ n.resp=hoy(); n.ya=false; n.chk=null; anotar(n, "resp"); }
   if(est==="enviado" && !n.dm){ n.dm=hoy(); anotar(n, "dm"); }
   return store.put(n);
 }
@@ -1687,7 +1687,7 @@ function renderHoy(){
 let RESP_TAB="resp";
 function renderRespuestas(){
   const t=hoy(), all=Object.values(LEADS);
-  const pend=all.filter(L=>L.estado==="enviado" && L.chk!==t).sort((a,b)=>(a.dm||"").localeCompare(b.dm||""));
+  const pend=all.filter(L=>L.estado==="enviado").sort((a,b)=>(a.dm||"").localeCompare(b.dm||""));
   const resp=all.filter(L=>["respondio","planes"].includes(L.estado))
     .sort((a,b)=>(a.ya?1:0)-(b.ya?1:0) || (b.resp||"").localeCompare(a.resp||""));
   const hace=d=>{ const n=dias(d); return n===0?"hoy":n===1?"ayer":`hace ${n} días`; };
@@ -1698,10 +1698,10 @@ function renderRespuestas(){
       `<span class="tag">${esc(EST[L.estado])}</span><span class="meta">${L.resp?hace(L.resp):""}</span>`,
       `<input type="text" class="said" data-said value="${esc(L.ultima||"")}" placeholder="¿Qué te respondió? (opcional)" aria-label="Qué respondió @${esc(L.user)}">`)).join(""),
       "Todavía nadie respondió.")
-    + blk(ic("ojo")+"Pendientes", pend.length, `<div class="hint">Abrí el chat y tocá una opción.</div>` + pend.map(L=>rowHTML(L,
-      `<a class="btn sm" href="https://ig.me/m/${encodeURIComponent(L.user)}" target="_blank" rel="noopener">Abrir chat ↗</a><button class="btn sm ok" data-est="respondio">Respondió</button><button class="btn sm ghost" data-chk>Nada</button>`,
+    + blk(ic("ojo")+"Pendientes", pend.length, `<div class="hint">Los que mandaste y todavía no respondieron. La casilla en blanco se tilda cuando los revisás y se destilda sola cuando responden.</div>` + pend.map(L=>rowHTML(L,
+      `<a class="btn sm" href="https://ig.me/m/${encodeURIComponent(L.user)}" target="_blank" rel="noopener">Abrir chat ↗</a><button class="btn sm ok" data-est="respondio">Respondió</button><label class="btn sm ya"><input type="checkbox" data-chk2 ${L.chk?"checked":""}> Revisado</label>`,
       `<span class="meta">1er mensaje ${L.dm?hace(L.dm):""}</span>`)).join(""),
-      "Revisaste todos por hoy.");
+      "Nadie pendiente: todos respondieron o todavía no mandaste mensajes.");
   $("#resp-tabs").innerHTML=[["resp","Respondidos",resp.filter(L=>!L.ya).length],["pend","Pendientes",pend.length]].map(([k,t,n])=>`<button type="button" data-rt="${k}" aria-pressed="${RESP_TAB===k}">${t} <span class="mono">${n}</span></button>`).join("");
   document.querySelectorAll("#resp-blocks > .block").forEach((b,i)=>{ b.hidden = (i===0) !== (RESP_TAB==="resp"); });
 }
@@ -1710,6 +1710,7 @@ document.addEventListener("change", e=>{
   const row=e.target.closest?.(".row[data-id]"); if(!row) return; const L=LEADS[row.dataset.id]; if(!L) return;
   if(e.target.matches("[data-ya]")) store.put({...L, ya:e.target.checked});
   else if(e.target.matches("[data-said]")) store.put({...L, ultima:e.target.value.trim()});
+  else if(e.target.matches("[data-chk2]")) store.put({...L, chk: e.target.checked ? hoy() : null});
 });
 
 function sessionGet(k){ try{ return sessionStorage.getItem("cs-"+k); }catch{ return null; } }
@@ -1748,6 +1749,7 @@ document.addEventListener("change", e=>{
   const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
   const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : "bio";
   const n={...L, [campo]:e.target.value.trim(), upd:hoy()};
+  if(campo==="ultResp" && n.ultResp) n.chk=null;   // llegó un mensaje: se destilda
   if(campo==="seguidores"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
   store.put(n);
 });

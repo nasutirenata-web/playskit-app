@@ -1689,8 +1689,8 @@ function initCargar(){
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
-    if(!L.seguidores && !L.bio && SAMPLE) setTimeout(()=>autoInfo(L), 100);
-    toast(L.seguidores||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : (SAMPLE ? `@${u} cargado · buscando sus seguidores y bio…` : `@${u} cargado · tocá el @ para sumar seguidores y bio`));
+    // (la búsqueda automática con Google no encontró datos de Instagram en las pruebas: queda apagada; seguidores y bio se completan en la fila)
+    toast(L.seguidores||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · completá seguidores y bio en su fila`);
   };
   $("#lupa-g").addEventListener("submit", e=>{ e.preventDefault(); cargarPegado(); });
   $("#lupa-pega").addEventListener("paste", ()=>setTimeout(cargarPegado, 0));

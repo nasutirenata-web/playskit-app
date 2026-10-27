@@ -479,6 +479,20 @@ select option{background:var(--surface);color:var(--ink)}
 :root[data-bg="claro"] .nota-in,:root[data-bg="claro"] .nota-txt{color:#0b8fb5}
 .nota-txt{font:300 13px var(--f-body);color:#5fd0ee;margin-top:2px}
 #l-funnel{display:none}
+/* botones de cada DJ: enviado ▲ celeste · respondió ✓ verde · ebook ○ ámbar · planes P violeta */
+.flag{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--glass-brd);background:rgba(255,255,255,.35);display:inline-grid;place-items:center;cursor:pointer;color:var(--muted);font:800 14px var(--f-body);padding:0}
+.flag svg{width:14px;height:14px;fill:currentColor}
+.flag:hover{border-color:currentColor}
+.flag.env.on{background:rgba(47,155,242,.18);border-color:#2f9bf2;color:#2f9bf2}
+.flag.resp.on{background:#16a34a;border-color:#16a34a;color:#fff}
+.flag.ebook.on{background:#f59e0b;border-color:#f59e0b;color:#fff}
+.flag.ebook.on circle{fill:currentColor}
+.flag.planes.on{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.fl{display:flex;align-items:center;gap:8px;font-size:13px}
+#d-states{display:flex;flex-wrap:wrap;gap:14px;margin:6px 0 14px}
+.mini{width:100%;min-width:64px;max-width:96px;border:1px solid var(--glass-brd);border-radius:10px;padding:5px 8px;font-size:13px;background:rgba(255,255,255,.5);color:inherit}
+td select.mini{max-width:110px}
+.prev-vacio{color:var(--muted)}
 /* último mensaje enviado y qué respondió: dos líneas finitas dentro de cada tilde */
 .nota-in.tx{width:100%;min-width:150px !important;max-width:230px;margin:6px auto 0;text-align:left;font-size:12.5px;color:var(--muted)}
 .nota-in.tx.resp{color:#0b8fb5}
@@ -881,7 +895,7 @@ th.c,td.c{text-align:center}
       <select id="l-pais" aria-label="Filtrar por país"><option value="">Todos los países</option></select>
     </div>
     <div class="funnel" id="l-funnel"></div>
-    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Bio</th><th class="c">Mensaje enviado</th><th class="c">Respondió</th></tr></thead><tbody id="l-body"></tbody></table></div>
+    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
   </section>
 
   <!-- MENSAJES (chat) -->
@@ -1562,11 +1576,35 @@ document.addEventListener("toggle", e=>{
 }, true);
 
 const RESP_OK=["respondio","planes","quiere","cerrado"];
+// los 4 botones de cada DJ (en la lista y en su ficha): enviado ▲ celeste · respondió ✓ verde · ebook ○ · planes P violeta
+const FLAGS=[
+  ["env","Enviado (primer mensaje)","<svg viewBox='0 0 24 24'><path d='M7 4l13 8-13 8z'/></svg>"],
+  ["resp","Respondió","✓"],
+  ["ebook","Mandé ebook (productor)","<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='7' fill='none' stroke='currentColor' stroke-width='2.6'/></svg>"],
+  ["planes","Planes enviados","P"]];
+const flagOn=(L,k)=> k==="env" ? L.estado==="enviado" : k==="resp" ? RESP_OK.includes(L.estado) : k==="ebook" ? !!L.ebook : !!L.planes;
+const flagBtn=(L,[k,t,ic])=>`<button type="button" class="flag ${k} ${flagOn(L,k)?"on":""}" data-flag="${k}" aria-pressed="${flagOn(L,k)}" title="${t}" aria-label="${t}">${ic}</button>`;
+async function toggleFlag(L,k){
+  if(k==="env"){
+    if(L.estado==="enviado") return setEstado(L,"nuevo",{dm:""});
+    if(!RESP_OK.includes(L.estado)) return setEstado(L,"enviado");
+    return toast("Ya respondió: no hace falta marcar el envío");
+  }
+  if(k==="resp"){
+    if(["quiere","cerrado"].includes(L.estado)) return toast("Ya avanzó más: cambialo desde su ficha");
+    if(!RESP_OK.includes(L.estado)) return setEstado(L,"respondio");
+    return setEstado(L, L.dm?"enviado":"nuevo");
+  }
+  if(k==="ebook") return store.put({...L, ebook:!L.ebook, upd:hoy()});
+  if(k==="planes") return store.put({...L, planes:L.planes?"":hoy(), upd:hoy()});
+}
 // nota escrita directo debajo de cada DJ
 document.addEventListener("change", e=>{
-  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp; if(!id) return; const L=LEADS[id]; if(!L) return;
-  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : "ultResp";
-  store.put({...L, [campo]:e.target.value.trim(), upd:hoy()});
+  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
+  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : "bio";
+  const n={...L, [campo]:e.target.value.trim(), upd:hoy()};
+  if(campo==="seguidores"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
+  store.put(n);
 });
 /* acciones en filas (Hoy + recientes) */
 document.addEventListener("click", e=>{
@@ -1575,18 +1613,8 @@ document.addEventListener("click", e=>{
   const b=e.target.closest("button");
   if(row.tagName==="TR"){
     if(e.target.closest(".nota-in")) return;
-    if(b?.hasAttribute("data-sent")){   // marcar "mensaje enviado"; si responde, se desmarca solo
-      if(L.estado==="enviado") setEstado(L,"nuevo",{dm:""});
-      else if(!RESP_OK.includes(L.estado)) setEstado(L,"enviado");
-      else toast("Ya respondió: no hace falta marcar el envío");
-      return;
-    }
-    if(b?.hasAttribute("data-tick")){
-      if(!RESP_OK.includes(L.estado)) setEstado(L,"respondio");
-      else if(L.estado==="respondio") setEstado(L, L.dm?"enviado":"nuevo");
-      else toast("Ya avanzó más: cambialo desde su ficha");
-      return;
-    }
+    if(b?.dataset.flag){ toggleFlag(L, b.dataset.flag); return; }   // enviado / respondió / ebook / planes, directo desde la lista
+    if(e.target.closest("select,input")) return;
     openDrawer(L.id); return;
   }
   if(!b) return;
@@ -1624,6 +1652,21 @@ function initCargar(){
     $("#lupa-pega").focus();
   });
   // pegar el perfil carga el DJ directo en el CRM (si se pega también el texto del perfil, toma seguidores y link de la bio)
+  // busca en Google los seguidores y la bio del perfil (con la IA); es una ayuda, conviene mirar que estén bien
+  const segTxtN=s=>String(s).toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
+  const autoInfo = async L=>{
+    if(!SAMPLE) return;
+    try{
+      const r = await SAMPLE(`Buscá en Google el perfil público de Instagram @${L.user} (instagram.com/${L.user}), de un DJ. Respondé SOLO un JSON válido, sin texto extra, con esta forma: {"seguidores":"cantidad de seguidores tal como figura (por ejemplo 4.2k o 12500) o null","bio":"Linktree si en su bio hay un link de linktr.ee o similar, Drive si hay un link de Google Drive, Plantilla si hay una web armada con plantilla, Nada si no tiene ningún link, o null si no lo pudiste ver"}. Si no encontrás un dato poné null y no inventes.`, {search:true});
+      const m=String(r.text||"").match(/\{[\s\S]*\}/); if(!m) return toast(`@${L.user}: no encontré sus datos, completalos a mano`, 3500);
+      const j=JSON.parse(m[0]); const cur=LEADS[L.id]; if(!cur) return; const n={...cur};
+      if(j.seguidores && !cur.seguidores) n.seguidores=segTxtN(j.seguidores);
+      if(j.bio && BIOS.includes(j.bio) && !cur.bio) n.bio=j.bio;
+      if(n.seguidores===cur.seguidores && n.bio===cur.bio) return toast(`@${L.user}: no encontré sus datos, completalos a mano`, 3500);
+      n.prio=prioDe(n).k; await store.put(n);
+      toast(`@${L.user}: datos encontrados · prioridad ${prioDe(n).n}`, 3500);
+    }catch{ toast(`@${L.user}: no pude buscar sus datos, completalos a mano`, 3500); }
+  };
   const cargarPegado = async()=>{
     const raw=$("#lupa-pega").value.trim(); if(!raw) return;
     const tok=(raw.match(/instagram\.com\/[^\s/?#]+/i)||raw.match(/@[\w.]+/)||[raw.split(/\s/)[0]])[0];
@@ -1646,7 +1689,8 @@ function initCargar(){
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
-    toast(L.seguidores||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · tocá el @ para sumar seguidores y bio`);
+    if(!L.seguidores && !L.bio && SAMPLE) setTimeout(()=>autoInfo(L), 100);
+    toast(L.seguidores||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : (SAMPLE ? `@${u} cargado · buscando sus seguidores y bio…` : `@${u} cargado · tocá el @ para sumar seguidores y bio`));
   };
   $("#lupa-g").addEventListener("submit", e=>{ e.preventDefault(); cargarPegado(); });
   $("#lupa-pega").addEventListener("paste", ()=>setTimeout(cargarPegado, 0));
@@ -1687,8 +1731,8 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td class="mono">${esc(L.seguidores||"")}</td><td>${esc(L.bio||"")}</td><td class="c"><button type="button" class="tick ${L.estado==="enviado"?"on":""}" data-sent aria-pressed="${L.estado==="enviado"}" title="Mensaje enviado" aria-label="Mensaje enviado">✓</button><input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c"><button type="button" class="tick ${RESP_OK.includes(L.estado)?"on":""}" data-tick aria-pressed="${RESP_OK.includes(L.estado)}" title="Respondió" aria-label="Respondió">✓</button><input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td></tr>`).join("")
-    : `<tr><td colspan="6" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
+  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
 $("#l-q").addEventListener("input", renderLeads);
@@ -1975,25 +2019,27 @@ $("#c-export").addEventListener("click", e=>{
 /* ---------- Ficha (panel lateral) ---------- */
 let DRAWER=null;
 const SIG = {nuevo:["/hola"],calentado:["/hola","/vista"],enviado:["/seguir","/seguir2","/seguir3"],respondio:["/p1","/p2","/p3","/p4","/web","/planes"],planes:["/wsp","/seguirplanes"],quiere:["WhatsApp 1","WhatsApp 2","WhatsApp 3","WhatsApp 4"],despues:["/hola"]};
+const MSGS_D=[["/hola","Primer mensaje"],["/p1","P1"],["/p2","P2"],["/p3","P3"],["/p4","P4"],["/web","Web"],["/planes","Planes"],["/wsp","WhatsApp"],["/seguir","Seguir día 2"],["/seguir2","Seguir día 5"],["/seguir3","Seguir día 10"]];
+let DSEL=null;   // mensaje elegido en la ficha: se ve la vista previa y recién ahí se copia
 function openDrawer(id){
   DRAWER=id; const L=LEADS[id]; if(!L) return;
   const tono=tonoDe(L);
-  const pasos=SIG[L.estado]||[];
-  // en la charla, sugerir el siguiente que todavía no se mandó
-  const usados=L.usados||[]; const sug=pasos.find(k=>!usados.includes(k))||pasos[0];
+  DSEL=null;
   const d=$("#drawer");
   d.innerHTML = `<div class="head"><span class="cc">${esc(L.pais)}</span><h2>@${esc(L.user)}</h2><a class="btn sm" href="${ig(L.user)}" target="_blank" rel="noopener">Abrir IG ↗</a><button class="btn sm ghost" data-x aria-label="Cerrar">✕</button></div>
     <div class="timeline">${[["cargado","cargado"],["calentado","calentado"],["dm","1er DM"],["resp","respondió"],["planes","planes"],["quiere","quiere"],["cerrado","cerrado"]].filter(([f])=>L[f]).map(([f,l])=>`<span>${l} ${corta(L[f])}</span>`).join("")}</div>
     <div class="states" id="d-states"></div>
-    ${sug?`<div class="next"><span class="lbl">Próximo mensaje · ${esc(MK[sug].t)}</span><pre id="d-sug">${esc(texto(sug,L))}</pre>
-      ${MK[sug].nota?`<div class="note" style="color:var(--warn);font-size:12.5px;font-weight:600;margin-bottom:8px">${esc(MK[sug].nota)}</div>`:""}
-      <div class="acts"><button class="btn pri sm" data-dcopy="${esc(sug)}">Copiar</button>${pasos.filter(k=>k!==sug).map(k=>`<button class="btn sm" data-dcopy="${esc(k)}">${esc(k)}</button>`).join("")}</div></div>`:""}
+    <div class="next"><span class="lbl">Mensajes</span>
+      <div class="chips" id="d-msgs">${MSGS_D.map(([k,t])=>`<button type="button" data-prev="${esc(k)}" aria-pressed="false">${esc(t)}</button>`).join("")}</div>
+      <pre id="d-sug" class="prev-vacio">Tocá un mensaje para ver cómo queda</pre>
+      <div id="d-nota" style="color:var(--warn);font-size:12.5px;font-weight:600;margin-bottom:8px" hidden></div>
+      <div class="acts"><button class="btn pri sm" type="button" data-dcopy-cur hidden>Copiar</button></div></div>
     <div class="two">
       <div class="field"><label for="d-nombre">Nombre</label><input type="text" id="d-nombre" data-f="nombre" value="${esc(L.nombre||"")}"></div>
       <div class="field"><label for="d-seg">Seguidores</label><input type="text" id="d-seg" data-f="seguidores" value="${esc(L.seguidores||"")}"></div>
       <div class="field"><label for="d-pais">País</label><select id="d-pais" data-f="pais">${PAISES.map(p=>`<option value="${p.c}" ${p.c===L.pais?"selected":""}>${p.n}</option>`).join("")}</select></div>
       <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"Presskit actual")}" list="fuentes"></div>
-      <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio">${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>
+      <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>
     </div>
     <div class="field"><label for="d-notas">Notas</label><textarea id="d-notas" data-f="notas">${esc(L.notas||"")}</textarea></div>
     <div class="field" id="d-volver-w" ${L.estado==="despues"?"":"hidden"}><label for="d-volver">Volver a escribir el</label><input type="date" id="d-volver" data-f="volver" value="${esc(L.volver||"")}"></div>
@@ -2019,7 +2065,7 @@ function openDrawer(id){
 }
 function refreshDrawerStates(){
   const L=LEADS[DRAWER]; const el=$("#d-states"); if(!L||!el) return;
-  el.innerHTML = ESTADOS.map(([k,l])=>`<button data-st="${k}" aria-pressed="${L.estado===k}">${l}</button>`).join("");
+  el.innerHTML = FLAGS.map(fl=>`<div class="fl">${flagBtn(L,fl)}<span>${fl[1]}</span></div>`).join("");
 }
 function closeDrawer(){ DRAWER=null; $("#drawer").hidden=true; $("#scrim").hidden=true; render(); }
 $("#scrim").addEventListener("click", closeDrawer);
@@ -2035,6 +2081,11 @@ $("#drawer").addEventListener("change", e=>{
 $("#drawer").addEventListener("click", async e=>{
   const L=LEADS[DRAWER]; if(!L) return; const b=e.target.closest("button"); if(!b) return;
   if(b.hasAttribute("data-x")) return closeDrawer();
+  if(b.dataset.flag){ await toggleFlag(L, b.dataset.flag); setTimeout(()=>refreshDrawerStates(),60); return; }
+  if(b.dataset.prev){ DSEL=b.dataset.prev; $("#d-sug").textContent=texto(DSEL,L); $("#d-sug").classList.remove("prev-vacio");
+    const nota=MK[DSEL]?.nota; $("#d-nota").textContent=nota||""; $("#d-nota").hidden=!nota;
+    document.querySelectorAll("#d-msgs button").forEach(x=>x.setAttribute("aria-pressed", x===b)); $("#drawer [data-dcopy-cur]").hidden=false; return; }
+  if(b.hasAttribute("data-dcopy-cur")){ if(DSEL) b.dataset.dcopy=DSEL; }
   if(b.dataset.st){ const est=b.dataset.st; await setEstado(L, est, est==="despues"&&!L.volver?{volver:sumar(hoy(),30)}:{}); openDrawer(L.id); toast(EST[est]); return; }
   if(b.dataset.dcopy){ const k=b.dataset.dcopy; if(await copiar(texto(k,L), b)){
       const usados=[...new Set([...(L.usados||[]),k])]; let extra={usados};

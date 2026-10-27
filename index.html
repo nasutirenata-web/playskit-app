@@ -746,6 +746,50 @@ th.c,td.c{text-align:center}
 :root[data-bg="negro"] a{color:#7dd3fc}
 :root[data-bg="negro"] .nota-in,:root[data-bg="negro"] .nota-txt,:root[data-bg="negro"] .nota-in.tx.resp{color:#7dd3fc !important}
 :root[data-bg="negro"] .nota-in.tx:not(.resp){color:#9fb4c0 !important}
+
+/* ===== Login: web celeste con el cuadro en blanco (no deja ver la app de atrás) ===== */
+.login{background:linear-gradient(135deg,#bfe6fa 0%,#c8f1f2 55%,#d6eafb 100%) !important;z-index:60}
+.login .login-card{--ink:#12141a;--muted:#6b7a8c;color:#12141a;background:#ffffff !important;border:1px solid #e3edf5 !important;box-shadow:0 8px 30px rgba(30,70,110,.12) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+.login .login-card input{background:#ffffff !important;border:1px solid #d5e3ee !important;color:#12141a !important}
+.login .login-card .btn.pri{background:#2f9bf2 !important;color:#ffffff !important;border-color:transparent !important}
+.login .login-card .lg-swap{color:#0b7fc7}
+.login .login-card h1{color:#12141a}
+
+/* ===== Sin brillo: vidrio mate (sin reflejos, sin resplandores, sin degradés brillantes) ===== */
+:root:is([data-bg="claro"],[data-bg="gris"],[data-bg="negro"]){--brillo:0 0 0 0 transparent}
+:root:is([data-bg="claro"],[data-bg="gris"],[data-bg="negro"]) .glow{display:none !important}
+:root[data-bg="claro"] body{background:#e6f2fa !important}
+:root[data-bg="gris"] body{background:#11161d !important}
+:root[data-bg="negro"] body{background:#000000 !important}
+:root:is([data-bg="claro"],[data-bg="gris"],[data-bg="negro"]) :is(.btn,.chips button,.funnel button,.states button,.cities a,.sync,.theme,.chat-in,.b.bot .t,.b.me .t,.flag,.tick,.side,.topbar,.login-card){
+  box-shadow:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+:root[data-bg="claro"] :is(.block,.card,.tile,.chk,.msg,.tablewrap,details.more,.convs,.chat-log,#drawer){
+  background:rgba(255,255,255,.92) !important;border:1px solid #d9e8f3 !important;box-shadow:0 1px 4px rgba(30,70,110,.07) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+:root[data-bg="claro"] :is(.side,.topbar){background:#f7fbfe !important;border-color:#d9e8f3 !important}
+:root:is([data-bg="gris"],[data-bg="negro"]) :is(.block,.card,.tile,.chk,.msg,.tablewrap,details.more,.convs,.chat-log,#drawer){
+  background:rgba(255,255,255,.05) !important;border:1px solid rgba(255,255,255,.12) !important;box-shadow:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+:root[data-bg="gris"] :is(.side,.topbar){background:#161c25 !important;border-color:rgba(255,255,255,.1) !important}
+:root[data-bg="negro"] :is(.side,.topbar){background:#050709 !important;border-color:rgba(125,211,252,.16) !important}
+:root[data-bg="claro"] :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"],.b.me .t){background:#2f9bf2 !important;border-color:transparent !important;color:#ffffff !important}
+:root[data-bg="gris"] :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"],.b.me .t){background:#2f9bf2 !important;border-color:transparent !important;color:#ffffff !important}
+:root[data-bg="negro"] :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"],.b.me .t){background:#38bdf8 !important;border-color:transparent !important;color:#04202c !important}
+:root[data-bg="claro"] .b.bot .t{background:#eef5fa !important;border:1px solid #d9e8f3 !important}
+:root[data-bg="claro"] :is(input[type=text],input[type=date],input[type=search],input[type=email],input[type=password],select,textarea){box-shadow:none !important}
+tr.grupo td{padding:16px 14px 8px;font-size:15px;background:rgba(47,155,242,.10);border-bottom:2px solid rgba(47,155,242,.35)}
+tr.grupo .sub{margin-left:8px}
+/* @ de cada DJ: link que abre su Instagram */
+a.ig-link{color:inherit;text-decoration:none}
+a.ig-link:hover b{text-decoration:underline;color:#0b7fc7}
+
+/* menú de arriba en celu y pantallas chicas: fila propia que se desliza con el dedo para ver todas las opciones */
+@media (max-width:1100px){
+  .side{flex-wrap:wrap;row-gap:6px}
+  .side #tabs{order:3;flex:1 0 100%;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x;padding-bottom:2px}
+  .side #tabs::-webkit-scrollbar{display:none}
+  .side #tabs button{flex:none;white-space:nowrap}
+  .side-foot{margin-left:auto}
+  .logo{flex:none}
+}
 </style>
 
 <div class="login" id="login" hidden>
@@ -1612,7 +1656,7 @@ document.addEventListener("click", e=>{
   const L=LEADS[row.dataset.id]; if(!L) return;
   const b=e.target.closest("button");
   if(row.tagName==="TR"){
-    if(e.target.closest(".nota-in")) return;
+    if(e.target.closest(".nota-in, a")) return;
     if(b?.dataset.flag){ toggleFlag(L, b.dataset.flag); return; }   // enviado / respondió / ebook / planes, directo desde la lista
     if(e.target.closest("select,input")) return;
     openDrawer(L.id); return;
@@ -1731,8 +1775,19 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  $("#l-body").innerHTML = rows.length ? rows.map(L=>`<tr class="click" data-id="${L.id}"><td><b>@${esc(L.user)}</b>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`).join("")
-    : `<tr><td colspan="8" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
+  const filaHTML=L=>`<tr class="click" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
+  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
+  let htmlLista="";
+  if(rows.length && SB && ADMIN){
+    // Renata ve la lista separada por cuenta: cada setter y los suyos
+    const mails=[...new Set(rows.map(duenoDe))];
+    const ord=m=> m===YO ? 1000 : ((EQ||[]).findIndex(p=>p.email.toLowerCase()===m)>=0 ? (EQ||[]).findIndex(p=>p.email.toLowerCase()===m) : 500);
+    mails.sort((a,b)=>ord(a)-ord(b));
+    htmlLista=mails.map(m=>{ const mias=rows.filter(L=>duenoDe(L)===m);
+      const nombre = m===YO ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
+      return `<tr class="grupo"><td colspan="8"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs</span></td></tr>`+mias.map(filaHTML).join(""); }).join("");
+  } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
+  $("#l-body").innerHTML = htmlLista || `<tr><td colspan="8" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
 $("#l-q").addEventListener("input", renderLeads);
@@ -2243,6 +2298,7 @@ function setTab(t){
   TAB=t; document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
   document.querySelectorAll("main>section").forEach(s=>s.hidden = s.id!=="v-"+t);
   try{ localStorage.setItem("cs-tab",t); }catch{}
+  document.querySelector("#tabs button[aria-selected=true]")?.scrollIntoView({inline:"center", block:"nearest"});
   if(t==="mensajes") renderMensajes();
   render();
 }

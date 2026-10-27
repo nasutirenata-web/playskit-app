@@ -1737,6 +1737,11 @@ function initCargar(){
     if(LEADS[id]){
       const d=LEADS[id].dueno&&LEADS[id].dueno.toLowerCase()!==YO ? nomMail(LEADS[id].dueno) : "";
       toast(d?`Este DJ ya está cargado en la cuenta de ${d}`:"Ese DJ ya está cargado", 3500); openDrawer(id); return; }
+    {   // parecido (solo cambia un punto, guión o guión bajo): también cuenta como repetido
+      const nn=u.replace(/[._-]/g,""); const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===nn);
+      if(par){ const d=par.dueno&&par.dueno.toLowerCase()!==YO ? " en la cuenta de "+nomMail(par.dueno) : "";
+        toast("Ya está cargado como @"+par.user+d, 3500); if(!d) openDrawer(par.id); return; }
+    }
     if(SB){   // ¿lo tiene otra setter? (cada una ve solo lo suyo, así que se lo pregunta a Supabase, que además le avisa a Renata)
       const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u});
       if(otra){ toast(`Este DJ ya está cargado en la cuenta de ${otra}`, 3500); return; }

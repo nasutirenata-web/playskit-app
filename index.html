@@ -905,6 +905,11 @@ input[type=text],input[type=search],input[type=email],input[type=password],input
 tr.grupo td{font-family:"Figtree","Segoe UI",system-ui,sans-serif !important;font-weight:700;font-size:14.5px}
 .prio{font-weight:600;font-size:11.5px}
 .lbl,.opt-l,.who-l{font-weight:500}
+
+.row.pend-resp .u,.row.pend-resp .meta{font-weight:700 !important}
+.row.pend-resp .u{font-size:15.5px}
+tr.pend-resp a.ig-link b{font-weight:800}
+tr.pend-resp .prio{font-weight:700}
 </style>
 
 <div class="login" id="login" hidden>
@@ -1707,32 +1712,36 @@ function renderHoy(){
   $("#hoy-blocks").innerHTML = html;
 }
 /* Respuestas: barrido rápido de los que tienen mensaje enviado + lista de los que respondieron (como el panel LAX) */
-let RESP_TAB="resp";
+let RESP_TAB="pend";
 function renderRespuestas(){
-  const t=hoy(), all=Object.values(LEADS);
-  const pend=all.filter(L=>L.estado==="enviado").sort((a,b)=>(a.dm||"").localeCompare(b.dm||""));
-  const resp=all.filter(L=>["respondio","planes"].includes(L.estado))
-    .sort((a,b)=>(a.ya?1:0)-(b.ya?1:0) || (b.resp||"").localeCompare(a.resp||""));
-  const hace=d=>{ const n=dias(d); return n===0?"hoy":n===1?"ayer":`hace ${n} días`; };
-  const blk=(title,n,body,empty)=>`<div class="block"><div class="bhead"><h2>${title}</h2><span class="count ${n?"hot":"done"}">${n||"✓"}</span></div>${n?body:`<div class="empty">${empty}</div>`}</div>`;
+  const all=Object.values(LEADS);
+  // Pendientes = ya respondieron y falta contestarles (en negrita, como un mensaje sin leer)
+  const resp=all.filter(L=>RESP_OK.includes(L.estado)&&L.estado!=="quiere"&&L.estado!=="cerrado").sort((a,b)=>(b.resp||"").localeCompare(a.resp||""));
+  const porContestar=resp.filter(L=>!L.ya), contestados=resp.filter(L=>L.ya);
+  // Sin respuesta = les mandaste el primer mensaje y todavía no respondieron
+  const sinResp=all.filter(L=>L.estado==="enviado").sort((a,b)=>(a.dm||"").localeCompare(b.dm||""));
+  const hace=d=>{ const n=dias(d); return n===0?"hoy":n===1?"ayer":"hace "+n+" días"; };
+  const blk=(title,n,body)=>'<div class="block"><div class="bhead"><h2>'+title+'</h2><span class="count '+(n?"hot":"done")+'">'+(n||"✓")+'</span></div>'+(n?body:"")+'</div>';
+  const chat=L=>'<a class="btn sm" href="https://ig.me/m/'+encodeURIComponent(L.user)+'" target="_blank" rel="noopener">Abrir chat ↗</a>';
+  const filaResp=L=>rowHTML(L,
+    chat(L)+'<label class="btn sm ya"><input type="checkbox" data-ya '+(L.ya?"checked":"")+'> Ya contesté</label>',
+    '<span class="tag">'+esc(EST[L.estado])+'</span><span class="meta">'+(L.resp?hace(L.resp):"")+'</span>',
+    '<input type="text" class="said" data-said value="'+esc(L.ultima||"")+'" placeholder="¿Qué te respondió? (opcional)" aria-label="Qué respondió @'+esc(L.user)+'">');
   $("#resp-blocks").innerHTML =
-    blk(ic("chat")+"Respondidos", resp.filter(L=>!L.ya).length, resp.map(L=>rowHTML(L,
-      `<label class="btn sm ya"><input type="checkbox" data-ya ${L.ya?"checked":""}> Ya respondí</label><button class="btn sm" data-act="open">Nota</button>`,
-      `<span class="tag">${esc(EST[L.estado])}</span><span class="meta">${L.resp?hace(L.resp):""}</span>`,
-      `<input type="text" class="said" data-said value="${esc(L.ultima||"")}" placeholder="¿Qué te respondió? (opcional)" aria-label="Qué respondió @${esc(L.user)}">`)).join(""),
-      "Todavía nadie respondió.")
-    + blk(ic("ojo")+"Pendientes", pend.length, `<div class="hint">Los que mandaste y todavía no respondieron. La casilla en blanco se tilda cuando los revisás y se destilda sola cuando responden.</div>` + pend.map(L=>rowHTML(L,
-      `<a class="btn sm" href="https://ig.me/m/${encodeURIComponent(L.user)}" target="_blank" rel="noopener">Abrir chat ↗</a><button class="btn sm ok" data-est="respondio">Respondió</button><label class="btn sm ya"><input type="checkbox" data-chk2 ${L.chk?"checked":""}> Revisado</label>`,
-      `<span class="meta">1er mensaje ${L.dm?hace(L.dm):""}</span>`)).join(""),
-      "Nadie pendiente: todos respondieron o todavía no mandaste mensajes.");
-  $("#resp-tabs").innerHTML=[["resp","Respondidos",resp.filter(L=>!L.ya).length],["pend","Pendientes",pend.length]].map(([k,t,n])=>`<button type="button" data-rt="${k}" aria-pressed="${RESP_TAB===k}">${t} <span class="mono">${n}</span></button>`).join("");
-  document.querySelectorAll("#resp-blocks > .block").forEach((b,i)=>{ b.hidden = (i===0) !== (RESP_TAB==="resp"); });
+      blk(ic("chat")+"Pendientes", porContestar.length, porContestar.map(filaResp).join("").replace(/class="row"/g,'class="row pend-resp"'))
+    + blk(ic("ojo")+"Respondidos", contestados.length, contestados.map(filaResp).join(""))
+    + blk(ic("ojo")+"Sin respuesta", sinResp.length, sinResp.map(L=>rowHTML(L,
+        chat(L)+'<button class="btn sm ok" data-est="respondio">Respondió</button><label class="btn sm ya"><input type="checkbox" data-chk2 '+(L.chk?"checked":"")+'> Revisado</label>',
+        '<span class="meta">1er mensaje '+(L.dm?hace(L.dm):"")+'</span>')).join(""));
+  $("#resp-tabs").innerHTML=[["pend","Pendientes",porContestar.length],["hechos","Respondidos",contestados.length],["sin","Sin respuesta",sinResp.length]].map(([k,t,n])=>'<button type="button" data-rt="'+k+'" aria-pressed="'+(RESP_TAB===k)+'">'+t+' <span class="mono">'+n+'</span></button>').join("");
+  const orden=["pend","hechos","sin"];
+  document.querySelectorAll("#resp-blocks > .block").forEach((b,i)=>{ b.hidden = orden[i]!==RESP_TAB; });
 }
 $("#resp-tabs").addEventListener("click", e=>{ const b=e.target.closest("[data-rt]"); if(b){ RESP_TAB=b.dataset.rt; renderRespuestas(); } });
 document.addEventListener("change", e=>{
   const row=e.target.closest?.(".row[data-id]"); if(!row) return; const L=LEADS[row.dataset.id]; if(!L) return;
   if(e.target.matches("[data-ya]")) store.put({...L, ya:e.target.checked});
-  else if(e.target.matches("[data-said]")) store.put({...L, ultima:e.target.value.trim()});
+  else if(e.target.matches("[data-said]")) store.put({...L, ultima:e.target.value.trim(), ya:false});
   else if(e.target.matches("[data-chk2]")) store.put({...L, chk: e.target.checked ? hoy() : null});
 });
 
@@ -1772,7 +1781,7 @@ document.addEventListener("change", e=>{
   const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
   const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : "bio";
   const n={...L, [campo]:e.target.value.trim(), upd:hoy()};
-  if(campo==="ultResp" && n.ultResp) n.chk=null;   // llegó un mensaje: se destilda
+  if(campo==="ultResp" && n.ultResp){ n.chk=null; if(RESP_OK.includes(n.estado)) n.ya=false; }   // llegó un mensaje: vuelve a pendiente
   if(campo==="seguidores"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
   store.put(n);
 });
@@ -1953,7 +1962,7 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  const filaHTML=L=>`<tr class="click" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
+  const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
   const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
   if(SB && ADMIN){ renderColumnas(rows); return; }
   $("#crm-cols").hidden=true; $("#crm-tabla").hidden=false;

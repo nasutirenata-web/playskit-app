@@ -862,6 +862,26 @@ input[type=checkbox]:checked::after{content:"✓";color:#ffffff;font-size:13px;f
 :root[data-bg="negro"][data-dash] :is(.side,.topbar){background:#0c141b !important;border-color:#1d2b37 !important}
 :root[data-bg="negro"][data-dash] tr.grupo td{background:rgba(56,189,248,.10);border-bottom:2px solid rgba(56,189,248,.35)}
 :root[data-bg="negro"][data-dash] :is(td,th){border-bottom:1px solid #1d2b37}
+
+#b-hoy{display:none !important}
+.cols3{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:1000px){.cols3{grid-template-columns:minmax(0,1fr)}}
+.col-cuenta{padding:0 !important;overflow:hidden}
+.col-head{width:100%;display:flex;align-items:center;gap:10px;padding:18px 20px;background:none;border:0;cursor:pointer;color:inherit;text-align:left;font:inherit}
+.col-nom{font:500 21px "Playfair Display",Georgia,serif}
+.col-head .sub{margin-left:auto}
+.col-head .chev{width:18px;height:18px;flex:none;transition:transform .2s}
+.col-cuenta.open .chev{transform:rotate(180deg)}
+.col-body{border-top:1px solid var(--line);max-height:72vh;overflow:auto}
+.djc{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px;cursor:pointer}
+.djc:last-child{border-bottom:0}
+.djc-top{display:flex;align-items:center;gap:8px}
+.djc-mid{display:flex;gap:8px;align-items:center}
+.djc-mid .mini{max-width:130px}
+.djc-flags{display:flex;gap:10px}
+.djc .nota-in{margin:0;min-width:0}
+.djc .nota-in.tx{max-width:none;margin:0;text-align:left}
+.col-extra{margin-bottom:12px}
 </style>
 
 <div class="login" id="login" hidden>
@@ -1014,7 +1034,8 @@ input[type=checkbox]:checked::after{content:"✓";color:#ffffff;font-size:13px;f
       <select id="l-pais" aria-label="Filtrar por país"><option value="">Todos los países</option></select>
     </div>
     <div class="funnel" id="l-funnel"></div>
-    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
+    <div id="crm-cols" hidden style="margin-top:12px"></div>
+    <div class="tablewrap" id="crm-tabla" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
   </section>
 
   <!-- MENSAJES (chat) -->
@@ -1585,7 +1606,7 @@ function render(){
   $("#b-resp").textContent = Object.values(LEADS).filter(L=>["respondio","planes"].includes(L.estado) && !L.ya).length || "";
   pageHead();
   if(TAB==="hoy"){ renderKtiles(); }
-  if(TAB==="hoy" && !document.activeElement?.matches?.(".nota-in")) renderLeads();
+  if(TAB==="hoy" && !document.activeElement?.matches?.(".nota-in, .mini")) renderLeads();
   if(TAB==="respuestas" && !document.activeElement?.matches?.("[data-said]")) renderRespuestas();
   if(TAB==="mensajes") renderLista();
   if(TAB==="cargar") renderCargarSide();
@@ -1864,6 +1885,42 @@ function renderKtiles(){
   const items=[["DJs",L.length,"k1"],["Enviados",env,"k2"],["Respondieron",res,"k3"],["Planes",L.filter(x=>x.planes).length,"k4"],["Ebooks",L.filter(x=>x.ebook).length,"k5"]];
   $("#crm-kpis").innerHTML=items.map(([t,n,c])=>'<div class="ktile '+c+'"><b>'+n+'</b><span>'+t+'</span></div>').join("");
 }
+
+/* Renata: una columna por cuenta (Lucero, Ivan y la suya), cada una se despliega al tocarla; las demás setters son opcionales */
+let COL_OPEN=new Set(), COL_EXTRA=new Set();
+try{ COL_OPEN=new Set(JSON.parse(sessionStorage.getItem("cs-colopen")||"[]")); COL_EXTRA=new Set(JSON.parse(sessionStorage.getItem("cs-colextra")||"[]")); }catch{}
+const colGuardar=()=>{ try{ sessionStorage.setItem("cs-colopen",JSON.stringify([...COL_OPEN])); sessionStorage.setItem("cs-colextra",JSON.stringify([...COL_EXTRA])); }catch{} };
+function djCardHTML(L){
+  return '<div class="djc" data-id="'+L.id+'"><div class="djc-top"><a class="ig-link" href="'+ig(L.user)+'" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@'+esc(L.user)+'</b></a>'+(L.top?" ⭐":"")+" "+prioTag(L)+'<span class="mono sub" style="margin-left:auto">'+esc(L.pais)+'</span></div>'
+   +'<div class="djc-mid"><input type="text" class="mini" data-seg="'+L.id+'" value="'+esc(L.seguidores||"")+'" placeholder="seguidores" aria-label="Seguidores de @'+esc(L.user)+'"><select class="mini" data-bio="'+L.id+'" aria-label="Bio de @'+esc(L.user)+'"><option value="">bio</option>'+BIOS.map(b=>'<option '+(b===L.bio?"selected":"")+'>'+b+'</option>').join("")+'</select></div>'
+   +'<div class="djc-flags">'+FLAGS.map(fl=>flagBtn(L,fl)).join("")+'</div>'
+   +'<input type="text" class="nota-in" data-nota="'+L.id+'" value="'+esc(L.notas||"")+'" placeholder="+ nota" aria-label="Nota de @'+esc(L.user)+'">'
+   +'<input type="text" class="nota-in tx" data-ult="'+L.id+'" value="'+esc(L.ultMsg||"")+'" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @'+esc(L.user)+'">'
+   +'<input type="text" class="nota-in tx resp" data-resp="'+L.id+'" value="'+esc(L.ultResp||"")+'" placeholder="+ qué respondió" aria-label="Qué respondió @'+esc(L.user)+'"></div>';
+}
+function renderColumnas(rows){
+  $("#crm-tabla").hidden=true; const box=$("#crm-cols"); box.hidden=false;
+  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
+  const setters=(EQ||[]).filter(p=>p.rol!=="admin").map(p=>p.email.toLowerCase());
+  const fijas=setters.slice(0,2), opcionales=setters.slice(2);
+  const otros=[...new Set(rows.map(duenoDe))].filter(m=>m && !setters.includes(m) && m!==YO);
+  const cols=[...fijas, ...opcionales.filter(m=>COL_EXTRA.has(m)), ...otros, YO];
+  const chips=opcionales.filter(m=>!COL_EXTRA.has(m)).map(m=>'<button type="button" data-extra="'+esc(m)+'">+ '+esc(nomMail(m))+' ('+rows.filter(L=>duenoDe(L)===m).length+')</button>').join("");
+  box.innerHTML=(chips?'<div class="chips col-extra">'+chips+'</div>':"")+'<div class="cols3" style="--n:'+Math.min(cols.length,4)+'">'+cols.map(m=>{
+    const mias=rows.filter(L=>duenoDe(L)===m), abierta=COL_OPEN.has(m), nombre=m===YO?"Renata · mis DJs":nomMail(m);
+    return '<section class="card col-cuenta '+(abierta?"open":"")+'"><button type="button" class="col-head" data-colk="'+esc(m)+'" aria-expanded="'+abierta+'"><span class="col-nom">'+esc(nombre)+'</span><span class="sub">'+mias.length+' DJs</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+      +(abierta?'<div class="col-body">'+(mias.map(djCardHTML).join("")||'<div class="sub" style="padding:14px 18px">Todavía no cargó DJs.</div>')+'</div>':"")+'</section>';
+  }).join("")+'</div>';
+}
+$("#crm-cols").addEventListener("click", e=>{
+  const h=e.target.closest("[data-colk]"); if(h){ const k=h.dataset.colk; if(COL_OPEN.has(k)) COL_OPEN.delete(k); else COL_OPEN.add(k); colGuardar(); renderLeads(); return; }
+  const x=e.target.closest("[data-extra]"); if(x){ COL_EXTRA.add(x.dataset.extra); COL_OPEN.add(x.dataset.extra); colGuardar(); renderLeads(); return; }
+  const card=e.target.closest(".djc[data-id]"); if(!card) return; const L=LEADS[card.dataset.id]; if(!L) return;
+  const b=e.target.closest("button");
+  if(b&&b.dataset.flag){ toggleFlag(L,b.dataset.flag); return; }
+  if(e.target.closest("a,input,select,textarea")) return;
+  openDrawer(L.id);
+});
 function renderLeads(){
   const q=$("#l-q").value.trim().toLowerCase().replace(/^@/,""), pais=$("#l-pais").value;
   const all=Object.values(LEADS).filter(L=>!pais||L.pais===pais);
@@ -1873,6 +1930,8 @@ function renderLeads(){
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
   const filaHTML=L=>`<tr class="click" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
   const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
+  if(SB && ADMIN){ renderColumnas(rows); return; }
+  $("#crm-cols").hidden=true; $("#crm-tabla").hidden=false;
   let htmlLista="";
   if(rows.length && SB && ADMIN){
     // Renata ve la lista separada por cuenta: cada setter y los suyos

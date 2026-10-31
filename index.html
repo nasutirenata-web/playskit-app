@@ -1138,6 +1138,7 @@ tr.pend-resp .prio{font-weight:700}
   <section id="v-reporte" hidden>
     <div class="rtop"><input type="date" id="r-dia" aria-label="Día"><button class="btn pri" id="r-copy">Copiar reporte</button></div>
     <div class="tiles" id="r-tiles"></div>
+    <div id="r-partes"></div>
 
     <h2 class="h2s">¿Cómo vamos? <span class="sub">últimos 7 días</span></h2>
     <div class="checks" id="r-rates"></div>
@@ -1487,6 +1488,7 @@ document.addEventListener("click", async e=>{
 
 /* Equipo: llama a la función "equipo" de Supabase (crea y borra usuarios con la clave secreta, del lado del servidor) */
 let SB=null, EQ=null, EQDEL=null;
+let PARTES={};   // parte diario de cada setter (lo que cuenta en GptPlay: mensajes, seguimientos, respuestas, planes, ventas)
 async function equipo(body){
   const {data, error} = await SB.functions.invoke("equipo", {body});
   if(error){ let m="No se pudo conectar."; try{ m=(await error.context.json()).error||m; }catch{} return {error:m, status:error.context?.status}; }
@@ -1537,6 +1539,7 @@ function supaStore(sb){
   const rm=(t,id)=>write(t+":"+id, ()=>sb.from(t).delete().eq("id",id));
   const aplicar=(t,row,borrado)=>{
     if(t==="config"){ if(!borrado && row.data) CFG={...CFG,...row.data}; return; }
+    if(t==="charlas" && (String(row.id).startsWith("parte_") || (row.data&&row.data.parte))){ if(borrado) delete PARTES[row.id]; else PARTES[row.id]={...row.data, id:row.id}; return; }
     const M = t==="leads" ? LEADS : CHARLAS;
     if(borrado) delete M[row.id]; else M[row.id]={...row.data, id:row.id};
   };
@@ -1559,6 +1562,7 @@ function supaStore(sb){
     del:id=>{ delete LEADS[id]; render(); return rm("leads",id); },
     cfg:c=>{ CFG={...CFG,...c}; render(); return up("config","main",CFG); },
     putCharla:C=>{ CHARLAS[C.id]=C; renderLista(); const {id,...b}=C; return up("charlas",id,b); },
+    putParte:P=>{ PARTES[P.id]=P; render(); const {id,...b}=P; return up("charlas",id,b); },
     delCharla:id=>{ delete CHARLAS[id]; renderLista(); return rm("charlas",id); },
   };
 }
@@ -2160,7 +2164,31 @@ ${charla}
 
 Escribí SOLO el próximo mensaje de la setter, listo para pegar en Instagram. Sin comillas, sin explicaciones.`;
 }
+const PARTE_CAMPOS=[["mensajes","mensajes"],["seguimientos","seguimientos"],["respuestas","respuestas"],["planes","planes"],["interesados","interesados"],["ventas","ventas"]];
+// "hoy hicimos 12 mensajes, 3 seguimientos y 1 venta" -> {mensajes:12, seguimientos:3, ventas:1}
+function parteDe(txt){
+  const t=String(txt).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(!/(hoy|ayer|hicimos|hice|mande|mandamos|envie|enviamos|llevamos|llevo|cerre|vendi|vendimos)/.test(t)) return null;
+  const mapa=[[/^(mensaje|dm|primer)/,"mensajes"],[/^seguimiento/,"seguimientos"],[/^(respuesta|respondi|contest)/,"respuestas"],[/^plan/,"planes"],[/^interesad/,"interesados"],[/^(venta|cierre|vendi|cerr)/,"ventas"]];
+  const r={}; let m; const re=/(\d+)\s*(?:primeros\s+|nuevos\s+)?([a-z]+)/g;
+  while((m=re.exec(t))){ const k=(mapa.find(([x])=>x.test(m[2]))||[])[1]; if(k) r[k]=(r[k]||0)+(+m[1]); }
+  return Object.keys(r).length ? {campos:r, dia:/ayer/.test(t)?sumar(hoy(),-1):hoy()} : null;
+}
+async function cargarParte(p){
+  if(!YO || !store.putParte) return false;
+  const id="parte_"+YO+"_"+p.dia, prev=PARTES[id]||{};
+  const nuevo={...prev, parte:true, dueno:YO, dia:p.dia, ...p.campos, upd:hoy()};
+  await store.putParte({id, ...nuevo}); return nuevo;
+}
 async function responderIA(dijo){
+  const pt=parteDe(dijo);
+  if(pt){
+    CHAT.push({de:"dj", txt:dijo});
+    const n=await cargarParte(pt);
+    const dicho=PARTE_CAMPOS.filter(([k])=>pt.campos[k]!=null).map(([k,l])=>pt.campos[k]+" "+l).join(" · ");
+    CHAT.push({de:"setter", txt: n ? "✅ Cargado en el reporte de "+(pt.dia===hoy()?"hoy":"ayer")+": "+dicho+"\nSi te equivocaste, escribilo de nuevo con el número correcto." : "No pude cargarlo. Probá de nuevo."});
+    renderChat(); return;
+  }
   CHAT.push({de:"dj", txt:dijo});
   const slot={de:"setter", txt:""}; CHAT.push(slot); renderChat();
   PENSANDO=true; $("#c-send").disabled=true;
@@ -2260,6 +2288,9 @@ function renderReporte(){
   const dia=$("#r-dia").value||hoy();
   $("#r-tiles").innerHTML = [["Leads nuevos",contar("cargado",dia)],["Mensajes",contar("dm",dia)],["Seguimientos",contarSeg(dia)],["Respuestas",contar("resp",dia)],["Planes",contar("planes",dia)],["Quieren pagar",contar("quiere",dia)]]
     .map(([l,n])=>`<div class="tile"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  const ps=Object.values(PARTES).filter(P=>P.dia===dia).sort((a,b)=>(a.dueno||"").localeCompare(b.dueno||""));
+  const nomP=m=>{ const e=(EQ||[]).find(p=>p.email.toLowerCase()===(m||"").toLowerCase()); return e?.nombre||(m||"").split("@")[0]; };
+  $("#r-partes").innerHTML = ps.length ? '<div class="card" style="margin:12px 0"><h2>Lo que contó cada setter · '+corta(dia)+'</h2>'+ps.map(P=>'<div class="paybig"><b>'+esc(nomP(P.dueno))+'</b><span class="sub">'+PARTE_CAMPOS.filter(([k])=>P[k]!=null).map(([k,l])=>'<b>'+P[k]+'</b> '+l).join(" · ")+'</span></div>').join("")+'</div>' : '<div class="sub" style="margin:8px 0">Nadie contó su parte este día. Se carga escribiendo en GptPlay: "hoy hicimos 12 mensajes".</div>';
   const desde=sumar(hoy(),-6);
   const en=f=>Object.values(LEADS).filter(L=>L[f] && L[f]>=desde).length;
   const env=en("dm"), resp=en("resp"), pl=en("planes"), cer=en("cerrado");

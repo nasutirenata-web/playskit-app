@@ -1063,7 +1063,7 @@ tr.pend-resp .prio{font-weight:700}
     </div>
     <div class="funnel" id="l-funnel"></div>
     <div id="crm-cols" hidden style="margin-top:12px"></div>
-    <div class="tablewrap" id="crm-tabla" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
+    <div class="tablewrap" id="crm-tabla" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Pub.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
   </section>
 
   <!-- MENSAJES (chat) -->
@@ -1220,10 +1220,13 @@ function segNum(s){
   return isNaN(n)?null:n;
 }
 function prioDe(L){
-  const n=segNum(L.seguidores), s = n===null||n<1000 ? 0 : n<=20000 ? 2 : 1;
-  const b = ["Linktree","Nada","Drive"].includes(L.bio) ? 2 : L.bio==="Plantilla" ? 1 : 0;
-  const pts=s+b; if(n===null && !L.bio) return {pts:0, k:"sin", n:"Sin datos"};
-  return {pts, k: pts>=4?"alta":pts>=2?"media":"baja", n: pts>=4?"Alta":pts>=2?"Media":"Baja"};
+  // Caliente / Tibio / Frío según seguidores y publicaciones del perfil
+  const sn=segNum(L.seguidores), pn=segNum(L.posts);
+  if(sn===null && pn===null) return {pts:0, k:"sin", n:"Sin datos"};
+  const sp = sn===null||sn<500 ? 0 : sn<1000 ? 1 : sn<=20000 ? 3 : 1;   // 1k–20k es lo ideal; más de 20k ya suele tener manager y es más difícil
+  const pp = pn===null||pn<10 ? 0 : pn<30 ? 1 : pn<100 ? 2 : 3;           // más publicaciones = más activo y más material para su web
+  const pts=sp+pp;
+  return {pts, k: pts>=5?"alta":pts>=3?"media":"baja", n: pts>=5?"Caliente":pts>=3?"Tibio":"Frío"};
 }
 const prioTag=(L,big)=>{ const p=prioDe(L); return `<span class="prio ${p.k} ${big?"big":""}">${p.n}</span>`; };
 let toastT;
@@ -1778,11 +1781,11 @@ async function toggleFlag(L,k){
 }
 // nota escrita directo debajo de cada DJ
 document.addEventListener("change", e=>{
-  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
-  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : "bio";
+  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.pub||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
+  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : d.pub ? "posts" : "bio";
   const n={...L, [campo]:e.target.value.trim(), upd:hoy()};
   if(campo==="ultResp" && n.ultResp){ n.chk=null; if(RESP_OK.includes(n.estado)) n.ya=false; }   // llegó un mensaje: vuelve a pendiente
-  if(campo==="seguidores"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
+  if(campo==="seguidores"||campo==="posts"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
   store.put(n);
 });
 /* acciones en filas (Hoy + recientes) */
@@ -1840,6 +1843,7 @@ function initCargar(){
       if(error || !data || data.sinClave || data.vacio) return;
       const cur=LEADS[L.id]; if(!cur) return; const n={...cur};
       if(data.seguidores!=null && !cur.seguidores) n.seguidores=segTxtN(data.seguidores);
+      if(data.publicaciones!=null && !cur.posts) n.posts=String(data.publicaciones);
       const link=String(data.link||"").toLowerCase();
       if(!cur.bio){
         n.bio = !link ? "Nada" : /linktr|beacons|lnk.bio|bio.site|taplink|campsite|solo.to|linkin.bio/.test(link) ? "Linktree" : /drive.google|dropbox|docs.google/.test(link) ? "Drive" : "Plantilla";
@@ -1867,17 +1871,18 @@ function initCargar(){
       const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u});
       if(otra){ toast(`Este DJ ya está cargado en la cuenta de ${otra}`, 3500); return; }
     }
+    const pm=raw.match(/([0-9][0-9.,]*[ ]?(?:millones|mill|mil|k|m)?)[ ]*(?:publicaciones|posts)/i);
     const sm=raw.match(/(\d[\d.,]*\s?(?:millones|mill|mil|k|m)?)\s*(?:seguidores|followers)/i);
     const segTxt=s=>s.toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
     const bio=/linktr\.?ee/i.test(raw)?"Linktree":/drive\.google|docs\.google/i.test(raw)?"Drive":null;
     // nombre: el que escribió en la lupa; si no, se arma con el @ (julirossi.dj → Julirossi)
     const nom=$("#lupa-q").value.trim() || (u.split(/[._]+/).find(p=>p && !/^(dj|music|musica|oficial|official|ok)$/.test(p).valueOf() && /[a-z]/.test(p))||u).replace(/\d+/g,"").replace(/^./,c=>c.toUpperCase());
-    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Presskit actual", nombre:nom, lugar:"", seguidores:sm?segTxt(sm[1]):"", notas:"", top:false,
+    const L={id, user:u, pais:F.pais, bio:bio||"", fuente:"Presskit actual", nombre:nom, lugar:"", seguidores:sm?segTxt(sm[1]):"", posts:pm?segTxt(pm[1]):"", notas:"", top:false,
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
     if(SB && !L.seguidores && !L.bio) setTimeout(()=>autoInfo(L), 100);
-    toast(L.seguidores||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · completá seguidores y bio en su fila`);
+    toast(L.seguidores||L.posts||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · completá seguidores y bio en su fila`);
   };
   $("#lupa-g").addEventListener("submit", e=>{ e.preventDefault(); cargarPegado(); });
   $("#lupa-pega").addEventListener("paste", ()=>setTimeout(cargarPegado, 0));
@@ -1926,7 +1931,7 @@ try{ COL_OPEN=new Set(JSON.parse(sessionStorage.getItem("cs-colopen")||"[]")); C
 const colGuardar=()=>{ try{ sessionStorage.setItem("cs-colopen",JSON.stringify([...COL_OPEN])); sessionStorage.setItem("cs-colextra",JSON.stringify([...COL_EXTRA])); }catch{} };
 function djCardHTML(L){
   return '<div class="djc" data-id="'+L.id+'"><div class="djc-top"><a class="ig-link" href="'+ig(L.user)+'" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@'+esc(L.user)+'</b></a>'+(L.top?" ⭐":"")+" "+prioTag(L)+'<span class="mono sub" style="margin-left:auto">'+esc(L.pais)+'</span></div>'
-   +'<div class="djc-mid"><input type="text" class="mini" data-seg="'+L.id+'" value="'+esc(L.seguidores||"")+'" placeholder="seguidores" aria-label="Seguidores de @'+esc(L.user)+'"><select class="mini" data-bio="'+L.id+'" aria-label="Bio de @'+esc(L.user)+'"><option value="">bio</option>'+BIOS.map(b=>'<option '+(b===L.bio?"selected":"")+'>'+b+'</option>').join("")+'</select></div>'
+   +'<div class="djc-mid"><input type="text" class="mini" data-seg="'+L.id+'" value="'+esc(L.seguidores||"")+'" placeholder="seguidores" aria-label="Seguidores de @'+esc(L.user)+'"><input type="text" class="mini" data-pub="'+L.id+'" value="'+esc(L.posts||"")+'" placeholder="publicaciones" aria-label="Publicaciones de @'+esc(L.user)+'"><select class="mini" data-bio="'+L.id+'" aria-label="Bio de @'+esc(L.user)+'"><option value="">bio</option>'+BIOS.map(b=>'<option '+(b===L.bio?"selected":"")+'>'+b+'</option>').join("")+'</select></div>'
    +'<div class="djc-flags">'+FLAGS.map(fl=>flagBtn(L,fl)).join("")+'</div>'
    +'<input type="text" class="nota-in" data-nota="'+L.id+'" value="'+esc(L.notas||"")+'" placeholder="+ nota" aria-label="Nota de @'+esc(L.user)+'">'
    +'<input type="text" class="nota-in tx" data-ult="'+L.id+'" value="'+esc(L.ultMsg||"")+'" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @'+esc(L.user)+'">'
@@ -1962,7 +1967,7 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
+  const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><input type="text" class="mini" data-pub="${L.id}" value="${esc(L.posts||"")}" placeholder="—" aria-label="Publicaciones de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
   const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
   if(SB && ADMIN){ renderColumnas(rows); return; }
   $("#crm-cols").hidden=true; $("#crm-tabla").hidden=false;
@@ -1974,9 +1979,9 @@ function renderLeads(){
     mails.sort((a,b)=>ord(a)-ord(b));
     htmlLista=mails.map(m=>{ const mias=rows.filter(L=>duenoDe(L)===m);
       const nombre = m===YO ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
-      return `<tr class="grupo"><td colspan="8"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs</span></td></tr>`+mias.map(filaHTML).join(""); }).join("");
+      return `<tr class="grupo"><td colspan="9"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs</span></td></tr>`+mias.map(filaHTML).join(""); }).join("");
   } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
-  $("#l-body").innerHTML = htmlLista || `<tr><td colspan="8" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
+  $("#l-body").innerHTML = htmlLista || `<tr><td colspan="9" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
 $("#l-q").addEventListener("input", renderLeads);
@@ -2284,6 +2289,7 @@ function openDrawer(id){
     <div class="two">
       <div class="field"><label for="d-nombre">Nombre</label><input type="text" id="d-nombre" data-f="nombre" value="${esc(L.nombre||"")}"></div>
       <div class="field"><label for="d-seg">Seguidores</label><input type="text" id="d-seg" data-f="seguidores" value="${esc(L.seguidores||"")}"></div>
+      <div class="field"><label for="d-pub">Publicaciones</label><input type="text" id="d-pub" data-f="posts" value="${esc(L.posts||"")}"></div>
       <div class="field"><label for="d-pais">País</label><select id="d-pais" data-f="pais">${PAISES.map(p=>`<option value="${p.c}" ${p.c===L.pais?"selected":""}>${p.n}</option>`).join("")}</select></div>
       <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"Presskit actual")}" list="fuentes"></div>
       <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>

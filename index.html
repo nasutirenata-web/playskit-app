@@ -910,6 +910,10 @@ tr.grupo td{font-family:"Figtree","Segoe UI",system-ui,sans-serif !important;fon
 .row.pend-resp .u{font-size:15.5px}
 tr.pend-resp a.ig-link b{font-weight:800}
 tr.pend-resp .prio{font-weight:700}
+
+.bq-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bq-row .sub{margin-left:auto}
+#bq-n{width:auto;max-width:80px}
 </style>
 
 <div class="login" id="login" hidden>
@@ -982,6 +986,11 @@ tr.pend-resp .prio{font-weight:700}
       <form class="lupa" id="lupa-f" hidden><input type="search" id="lupa-q" placeholder="1 · Buscá el nombre del DJ" aria-label="Nombre del DJ" autocomplete="off">
         <button class="btn pri" type="submit" aria-label="Buscar en Instagram"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button></form>
       <form class="lupa lupa-solo" id="lupa-g"><input type="text" id="lupa-pega" placeholder="Pegá su perfil de Instagram y se carga solo" aria-label="Perfil de Instagram" autocomplete="off"></form>
+      <details class="rapidos" id="busq" style="margin-top:10px"><summary>Buscar DJs por palabra</summary>
+        <form class="lupa" id="bq-f" style="margin-top:8px;max-width:none"><input type="search" id="bq-q" placeholder="Ej: dj techno rosario" aria-label="Palabras para buscar DJs" autocomplete="off">
+          <select id="bq-n" aria-label="Cuántos resultados"><option value="20">20</option><option value="30" selected>30</option><option value="50">50</option></select>
+          <button class="btn pri" type="submit" id="bq-go">Buscar</button></form>
+        <div class="sub" id="bq-msg" style="margin-top:6px"></div><div id="bq-res"></div></details>
     </div>
     <div class="card" id="dup-box" hidden style="margin-bottom:14px"><h2>DJs repetidos</h2><div id="dup-list" class="sub" style="margin:8px 0"></div><button class="btn sm" type="button" id="dup-ok">Listo, ya vi</button></div>
     <div class="today-top" hidden>
@@ -1965,6 +1974,50 @@ $("#crm-cols").addEventListener("click", e=>{
   if(b&&b.dataset.flag){ toggleFlag(L,b.dataset.flag); return; }
   if(e.target.closest("a,input,select,textarea")) return;
   openDrawer(L.id);
+});
+
+// bio según el link del perfil (link en la bio = Linktree y similares; sin link = Nada; web propia = Plantilla)
+function bioDeLink(link){
+  link=String(link||"").toLowerCase();
+  if(!link) return "Nada";
+  if(/linktr|beacons|lnk.bio|bio.site|taplink|campsite|solo.to|linkin.bio/.test(link)) return "Linktree";
+  if(/drive.google|dropbox|docs.google/.test(link)) return "Drive";
+  return "Plantilla";
+}
+const segTxtG=s=>String(s).toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
+let BQ=[];
+async function buscarDJs(q,n){
+  const msg=$("#bq-msg"), box=$("#bq-res"); box.innerHTML=""; BQ=[];
+  if(!SB){ msg.textContent="La búsqueda funciona en la versión web."; return; }
+  msg.textContent="Buscando… puede tardar hasta un minuto"; $("#bq-go").disabled=true;
+  try{
+    const {data, error}=await SB.functions.invoke("chat",{body:{buscar:q, limite:+n}});
+    if(error){ let m="No pude buscar ahora."; try{ m=(await error.context.json()).error||m; }catch{} msg.textContent=m; }
+    else if(data&&data.sinClave){ msg.textContent="Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase."; }
+    else{
+      BQ=(data&&data.resultados)||[];
+      msg.textContent = BQ.length ? BQ.length+" perfiles encontrados · gastó unos US$"+(BQ.length*0.0027).toFixed(2)+" del plan gratis" : "No encontré perfiles con esas palabras.";
+      box.innerHTML=BQ.map((r,i)=>{
+        const L={seguidores:r.seguidores==null?"":String(r.seguidores), posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas)};
+        const ya=Object.values(LEADS).some(x=>x.user.replace(/[._-]/g,"")===r.user.toLowerCase().replace(/[._-]/g,""));
+        return '<div class="bq-row"><a class="ig-link" href="'+ig(r.user.toLowerCase())+'" target="_blank" rel="noopener"><b>@'+esc(r.user)+'</b></a> '+prioTag(L)
+          +'<span class="sub">'+(L.seguidores?esc(L.seguidores)+" seg":"")+(L.posts?" · "+esc(L.posts)+" pub":"")+'</span>'
+          +'<button type="button" class="btn sm" data-bq="'+i+'" '+(ya?"disabled":"")+'>'+(ya?"Ya está":"Agregar")+'</button></div>';
+      }).join("");
+    }
+  }catch{ msg.textContent="No pude buscar ahora."; }
+  $("#bq-go").disabled=false;
+}
+$("#bq-f").addEventListener("submit", e=>{ e.preventDefault(); const q=$("#bq-q").value.trim(); if(q) buscarDJs(q,$("#bq-n").value); });
+$("#bq-res").addEventListener("click", async e=>{
+  const b=e.target.closest("[data-bq]"); if(!b||b.disabled) return; const r=BQ[+b.dataset.bq]; if(!r) return;
+  const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
+  const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
+  if(par){ toast("Ya está cargado como @"+par.user, 3000); return; }
+  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("Este DJ ya está cargado en la cuenta de "+otra, 3500); return; } }
+  const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
+    posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
+  L.prio=prioDe(L).k; await store.put(L); b.disabled=true; b.textContent="Agregado ✓"; toast("@"+u+" agregado · "+prioDe(L).n);
 });
 function renderLeads(){
   const q=$("#l-q").value.trim().toLowerCase().replace(/^@/,""), pais=$("#l-pais").value;

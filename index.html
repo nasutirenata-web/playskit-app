@@ -1220,13 +1220,17 @@ function segNum(s){
   return isNaN(n)?null:n;
 }
 function prioDe(L){
-  // Caliente / Tibio / Frío según seguidores y publicaciones del perfil
-  const sn=segNum(L.seguidores), pn=segNum(L.posts);
-  if(sn===null && pn===null) return {pts:0, k:"sin", n:"Sin datos"};
-  const sp = sn===null||sn<500 ? 0 : sn<1000 ? 1 : sn<=20000 ? 3 : 1;   // 1k–20k es lo ideal; más de 20k ya suele tener manager y es más difícil
-  const pp = pn===null||pn<10 ? 0 : pn<30 ? 1 : pn<100 ? 2 : 3;           // más publicaciones = más activo y más material para su web
-  const pts=sp+pp;
-  return {pts, k: pts>=5?"alta":pts>=3?"media":"baja", n: pts>=5?"Caliente":pts>=3?"Tibio":"Frío"};
+  // Caliente / Tibio / Frío: seguidores, publicaciones totales, actividad de los últimos 30 días y vistas promedio contra seguidores.
+  // Cada dato que hay suma de 0 a 3 puntos; si falta alguno, se calcula con los que sí están.
+  const sn=segNum(L.seguidores), pn=segNum(L.posts), an=segNum(L.act30), vn=segNum(L.vistas);
+  const c=[];
+  if(sn!==null) c.push(sn<500 ? 0 : sn<1000 ? 1 : sn<=20000 ? 3 : 1);                       // 1k–20k es lo ideal; más de 20k ya suele tener manager
+  if(pn!==null) c.push(pn<10 ? 0 : pn<30 ? 1 : pn<100 ? 2 : 3);                              // más publicaciones = más material para su web
+  if(an!==null) c.push(an===0 ? 0 : an<4 ? 1 : an<12 ? 2 : 3);                               // publicó en los últimos 30 días
+  if(vn!==null && sn) { const r=vn/sn; c.push(r>=1 ? 3 : r>=0.3 ? 2 : r>=0.1 ? 1 : 0); }     // sus videos los ve gente de verdad
+  if(!c.length) return {pts:0, k:"sin", n:"Sin datos"};
+  const pct=c.reduce((a,x)=>a+x,0)/(c.length*3);
+  return {pts:Math.round(pct*100)/10, k: pct>=0.8?"alta":pct>=0.5?"media":"baja", n: pct>=0.8?"Caliente":pct>=0.5?"Tibio":"Frío"};
 }
 const prioTag=(L,big)=>{ const p=prioDe(L); return `<span class="prio ${p.k} ${big?"big":""}">${p.n}</span>`; };
 let toastT;
@@ -1844,6 +1848,8 @@ function initCargar(){
       const cur=LEADS[L.id]; if(!cur) return; const n={...cur};
       if(data.seguidores!=null && !cur.seguidores) n.seguidores=segTxtN(data.seguidores);
       if(data.publicaciones!=null && !cur.posts) n.posts=String(data.publicaciones);
+      if(data.actividad!=null && !cur.act30) n.act30=String(data.actividad);
+      if(data.vistas!=null && !cur.vistas) n.vistas=String(data.vistas);
       const link=String(data.link||"").toLowerCase();
       if(!cur.bio){
         n.bio = !link ? "Nada" : /linktr|beacons|lnk.bio|bio.site|taplink|campsite|solo.to|linkin.bio/.test(link) ? "Linktree" : /drive.google|dropbox|docs.google/.test(link) ? "Drive" : "Plantilla";
@@ -1881,7 +1887,7 @@ function initCargar(){
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
-    if(SB && !L.seguidores && !L.bio) setTimeout(()=>autoInfo(L), 100);
+    if(SB && !L.seguidores && !L.posts) setTimeout(()=>autoInfo(L), 100);
     toast(L.seguidores||L.posts||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · completá seguidores y bio en su fila`);
   };
   $("#lupa-g").addEventListener("submit", e=>{ e.preventDefault(); cargarPegado(); });
@@ -2290,6 +2296,8 @@ function openDrawer(id){
       <div class="field"><label for="d-nombre">Nombre</label><input type="text" id="d-nombre" data-f="nombre" value="${esc(L.nombre||"")}"></div>
       <div class="field"><label for="d-seg">Seguidores</label><input type="text" id="d-seg" data-f="seguidores" value="${esc(L.seguidores||"")}"></div>
       <div class="field"><label for="d-pub">Publicaciones</label><input type="text" id="d-pub" data-f="posts" value="${esc(L.posts||"")}"></div>
+      <div class="field"><label for="d-act">Publicó en 30 días</label><input type="text" id="d-act" data-f="act30" value="${esc(L.act30||"")}" placeholder="auto"></div>
+      <div class="field"><label for="d-vis">Vistas promedio</label><input type="text" id="d-vis" data-f="vistas" value="${esc(L.vistas||"")}" placeholder="auto"></div>
       <div class="field"><label for="d-pais">País</label><select id="d-pais" data-f="pais">${PAISES.map(p=>`<option value="${p.c}" ${p.c===L.pais?"selected":""}>${p.n}</option>`).join("")}</select></div>
       <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"Presskit actual")}" list="fuentes"></div>
       <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>

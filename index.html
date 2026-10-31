@@ -1808,6 +1808,7 @@ document.addEventListener("click", e=>{
   const L=LEADS[row.dataset.id]; if(!L) return;
   const b=e.target.closest("button");
   if(row.tagName==="TR"){
+    if(row.classList.contains("ro")) return;
     if(e.target.closest(".nota-in, a")) return;
     if(b?.dataset.flag){ toggleFlag(L, b.dataset.flag); return; }   // enviado / respondió / ebook / planes, directo desde la lista
     if(e.target.closest("select,input")) return;
@@ -1877,15 +1878,15 @@ function initCargar(){
     const id=idDe(u);
     if(LEADS[id]){
       const d=LEADS[id].dueno&&LEADS[id].dueno.toLowerCase()!==YO ? nomMail(LEADS[id].dueno) : "";
-      toast(d?`Este DJ ya está cargado en la cuenta de ${d}`:"Ese DJ ya está cargado", 3500); openDrawer(id); return; }
+      toast(d?`DJ REPETIDO · NO AGREGADO (ya está en la cuenta de ${d})`:"DJ REPETIDO · NO AGREGADO", 4000); if(!d) openDrawer(id); return; }
     {   // parecido (solo cambia un punto, guión o guión bajo): también cuenta como repetido
       const nn=u.replace(/[._-]/g,""); const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===nn);
       if(par){ const d=par.dueno&&par.dueno.toLowerCase()!==YO ? " en la cuenta de "+nomMail(par.dueno) : "";
-        toast("Ya está cargado como @"+par.user+d, 3500); if(!d) openDrawer(par.id); return; }
+        toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+d+")", 4000); if(!d) openDrawer(par.id); return; }
     }
     if(SB){   // ¿lo tiene otra setter? (cada una ve solo lo suyo, así que se lo pregunta a Supabase, que además le avisa a Renata)
       const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u});
-      if(otra){ toast(`Este DJ ya está cargado en la cuenta de ${otra}`, 3500); return; }
+      if(otra){ toast(`DJ REPETIDO · NO AGREGADO (ya está en la cuenta de ${otra})`, 4000); return; }
     }
     const pm=raw.match(/([0-9][0-9.,]*[ ]?(?:millones|mill|mil|k|m)?)[ ]*(?:publicaciones|posts)/i);
     const sm=raw.match(/(\d[\d.,]*\s?(?:millones|mill|mil|k|m)?)\s*(?:seguidores|followers)/i);
@@ -1910,7 +1911,10 @@ function initCargar(){
     e.preventDefault();
     const u=limpiarUser($("#a-user").value); if(!u){ toast("Falta el @"); return; }
     const id=idDe(u);
-    if(LEADS[id]){ toast("Ese DJ ya está cargado"); return; }
+    if(LEADS[id]){ toast("DJ REPETIDO · NO AGREGADO", 4000); return; }
+    { const nn=u.replace(/[._-]/g,""); const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===nn);
+      if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return; }
+      if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return; } } }
     F.fuente=$("#a-fuente").value.trim();
     try{ localStorage.setItem("cs-form", JSON.stringify(F)); }catch{}
     const L={id, user:u, pais:F.pais, bio:F.bio, fuente:F.fuente, nombre:$("#a-nombre").value.trim(), lugar:$("#a-lugar").value.trim(),
@@ -2019,8 +2023,8 @@ $("#bq-res").addEventListener("click", async e=>{
   const b=e.target.closest("[data-bq]"); if(!b||b.disabled) return; const r=BQ[+b.dataset.bq]; if(!r) return;
   const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
-  if(par){ toast("Ya está cargado como @"+par.user, 3000); return; }
-  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("Este DJ ya está cargado en la cuenta de "+otra, 3500); return; } }
+  if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return; }
+  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return; } }
   const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
   L.prio=prioDe(L).k; await store.put(L); b.disabled=true; b.textContent="Agregado ✓"; toast("@"+u+" agregado · "+prioDe(L).n);
@@ -2033,20 +2037,24 @@ function renderLeads(){
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
   const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><input type="text" class="mini" data-pub="${L.id}" value="${esc(L.posts||"")}" placeholder="—" aria-label="Publicaciones de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
-  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
-  if(SB && ADMIN){ renderColumnas(rows); return; }
+  const yo=(YO||"").toLowerCase();
+  // los DJs sin dueño anotado son de Renata (cargados antes de que existieran las cuentas por setter)
+  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||yo).toLowerCase();
   $("#crm-cols").hidden=true; $("#crm-tabla").hidden=false;
   let htmlLista="";
   if(rows.length && SB && ADMIN){
     // Renata ve la lista separada por cuenta: cada setter y los suyos
-    const mails=[...new Set(rows.map(duenoDe))];
-    const ord=m=> m===YO ? 1000 : ((EQ||[]).findIndex(p=>p.email.toLowerCase()===m)>=0 ? (EQ||[]).findIndex(p=>p.email.toLowerCase()===m) : 500);
+    const orden=["cami.500sanche@gmail.com","ivan.n.reyes@outlook.com"];
+    const mails=[...new Set([...orden, ...rows.map(duenoDe), yo])];
+    const ord=m=> m===yo ? 1000 : (orden.indexOf(m)>=0 ? orden.indexOf(m) : 500);
     mails.sort((a,b)=>ord(a)-ord(b));
     htmlLista=mails.map(m=>{ const mias=rows.filter(L=>duenoDe(L)===m);
-      const nombre = m===YO ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
-      return `<tr class="grupo"><td colspan="9"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs</span></td></tr>`+mias.map(filaHTML).join(""); }).join("");
+      const nombre = m===yo ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
+      return `<tr class="grupo"><td colspan="9"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}</span></td></tr>`+mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join(""); }).join("");
   } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
   $("#l-body").innerHTML = htmlLista || `<tr><td colspan="9" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
+  // las filas de Lucero e Ivan se ven pero no se tocan
+  document.querySelectorAll("#l-body tr.ro").forEach(r=>r.querySelectorAll("input,select,button").forEach(i=>i.disabled=true));
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
 $("#l-q").addEventListener("input", renderLeads);

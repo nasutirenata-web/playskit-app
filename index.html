@@ -911,6 +911,7 @@ tr.grupo td{font-family:"Figtree","Segoe UI",system-ui,sans-serif !important;fon
 tr.pend-resp a.ig-link b{font-weight:800}
 tr.pend-resp .prio{font-weight:700}
 
+.djc.ro{opacity:.85}.djc.ro input:disabled,.djc.ro select:disabled{cursor:default}
 .bq-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .bq-row .sub{margin-left:auto}
 #bq-n{width:auto;max-width:80px}
@@ -1954,22 +1955,27 @@ function djCardHTML(L){
 }
 function renderColumnas(rows){
   $("#crm-tabla").hidden=true; const box=$("#crm-cols"); box.hidden=false;
-  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||"").toLowerCase();
+  const yo=(YO||"").toLowerCase();
+  // los DJs sin dueño anotado son de Renata (cargados antes de que existiera la cuenta por setter)
+  const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||yo).toLowerCase();
   const setters=(EQ||[]).filter(p=>p.rol!=="admin").map(p=>p.email.toLowerCase());
-  const fijas=setters.slice(0,2), opcionales=setters.slice(2);
-  const otros=[...new Set(rows.map(duenoDe))].filter(m=>m && !setters.includes(m) && m!==YO);
-  const cols=[...fijas, ...opcionales.filter(m=>COL_EXTRA.has(m)), ...otros, YO];
+  const primeras=["cami.500sanche@gmail.com","ivan.n.reyes@outlook.com"].filter(m=>setters.includes(m));
+  const fijas=primeras.length===2?primeras:setters.slice(0,2), opcionales=setters.filter(m=>!fijas.includes(m));
+  const otros=[...new Set(rows.map(duenoDe))].filter(m=>m && !setters.includes(m) && m!==yo);
+  const cols=[...fijas, ...opcionales.filter(m=>COL_EXTRA.has(m)), ...otros, yo];
   const chips=opcionales.filter(m=>!COL_EXTRA.has(m)).map(m=>'<button type="button" data-extra="'+esc(m)+'">+ '+esc(nomMail(m))+' ('+rows.filter(L=>duenoDe(L)===m).length+')</button>').join("");
   box.innerHTML=(chips?'<div class="chips col-extra">'+chips+'</div>':"")+'<div class="cols3" style="--n:'+Math.min(cols.length,4)+'">'+cols.map(m=>{
-    const mias=rows.filter(L=>duenoDe(L)===m), abierta=COL_OPEN.has(m), nombre=m===YO?"Renata · mis DJs":nomMail(m);
-    return '<section class="card col-cuenta '+(abierta?"open":"")+'"><button type="button" class="col-head" data-colk="'+esc(m)+'" aria-expanded="'+abierta+'"><span class="col-nom">'+esc(nombre)+'</span><span class="sub">'+mias.length+' DJs</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+    const mias=rows.filter(L=>duenoDe(L)===m), abierta=COL_OPEN.has(m), nombre=m===yo?"Renata · mis DJs":nomMail(m);
+    return '<section class="card col-cuenta '+(abierta?"open":"")+(m===yo?"":" ajena")+'"><button type="button" class="col-head" data-colk="'+esc(m)+'" aria-expanded="'+abierta+'"><span class="col-nom">'+esc(nombre)+'</span><span class="sub">'+mias.length+' DJs</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
       +(abierta?'<div class="col-body">'+(mias.map(djCardHTML).join("")||'<div class="sub" style="padding:14px 18px">Todavía no cargó DJs.</div>')+'</div>':"")+'</section>';
   }).join("")+'</div>';
+  // las cuentas de las setters se ven pero no se tocan: solo se edita lo propio
+  box.querySelectorAll(".ajena .djc").forEach(c=>{ c.classList.add("ro"); c.querySelectorAll("input,select").forEach(i=>i.disabled=true); c.querySelectorAll("button").forEach(b=>b.disabled=true); });
 }
 $("#crm-cols").addEventListener("click", e=>{
   const h=e.target.closest("[data-colk]"); if(h){ const k=h.dataset.colk; if(COL_OPEN.has(k)) COL_OPEN.delete(k); else COL_OPEN.add(k); colGuardar(); renderLeads(); return; }
   const x=e.target.closest("[data-extra]"); if(x){ COL_EXTRA.add(x.dataset.extra); COL_OPEN.add(x.dataset.extra); colGuardar(); renderLeads(); return; }
-  const card=e.target.closest(".djc[data-id]"); if(!card) return; const L=LEADS[card.dataset.id]; if(!L) return;
+  const card=e.target.closest(".djc[data-id]"); if(!card||card.classList.contains("ro")) return; const L=LEADS[card.dataset.id]; if(!L) return;
   const b=e.target.closest("button");
   if(b&&b.dataset.flag){ toggleFlag(L,b.dataset.flag); return; }
   if(e.target.closest("a,input,select,textarea")) return;

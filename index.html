@@ -846,7 +846,7 @@ input[type=checkbox]:checked::after{content:"✓";color:#ffffff;font-size:13px;f
 :root[data-bg="claro"][data-museo] .hero-chat::before,:root[data-bg="claro"][data-museo] .hero-chat::after{display:none}
 
 /* ===== Números del CRM: tarjetas de color sin brillo (celeste, verde agua, verde, violeta, terracota) ===== */
-.ktiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.ktiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .ktile{border-radius:18px;padding:16px 18px;color:#ffffff;display:flex;flex-direction:column;gap:2px;min-height:84px;justify-content:center}
 .ktile b{font:600 30px/1.1 "Playfair Display",Georgia,serif}
 .ktile span{font-size:13px;font-weight:600;opacity:.92}
@@ -2017,7 +2017,7 @@ function renderKtiles(){
   const L=Object.values(LEADS);
   const env=L.filter(x=>x.dm||RESP_OK.includes(x.estado)||x.estado==="enviado").length;
   const res=L.filter(x=>RESP_OK.includes(x.estado)).length;
-  const items=[["DJs",L.length,"k1"],["Enviados",env,"k2"],["Respondieron",res,"k3"],["Planes",L.filter(x=>x.planes).length,"k4"]];
+  const items=[["DJs",L.length,"k1"],["Enviados",env,"k2"],["Respondieron",res,"k3"],["Planes",L.filter(x=>x.planes).length,"k4"],["Ebooks",L.filter(x=>x.ebook).length,"k5"]];
   $("#crm-kpis").innerHTML=items.map(([t,n,c])=>'<div class="ktile '+c+'"><b>'+n+'</b><span>'+t+'</span></div>').join("");
 }
 

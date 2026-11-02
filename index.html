@@ -944,6 +944,11 @@ tr.pend-resp .prio{font-weight:700}
 :root:root :is(#login,#palabra,#clave) .login-card .btn.pri{background:linear-gradient(135deg,#e6fdff 0%,#7fe6ee 30%,#ffffff 48%,#23b3c0 66%,#b5f2f6 100%) !important;color:#04262a !important;
   border-color:rgba(255,255,255,.45) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 6px 24px rgba(63,216,226,.28) !important}
 :root:root:root .login .login-card .lg-swap{color:#7fe6ee !important}
+/* Carteles de cada setter: se abren y se cierran */
+tr.grupo{cursor:pointer;user-select:none}
+tr.grupo:hover td{filter:brightness(1.18)}
+tr.grupo:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85}
 </style>
 
 <div class="login" id="login" hidden>
@@ -2107,6 +2112,14 @@ function actualizarCompletar(){
   const n=api.cuantos(); w.hidden = n===0;
   const b=$("#l-completar"); if(b) b.textContent="Completar datos ("+n+")";
 }
+// grupos abiertos/cerrados de la lista de Renata: por defecto el propio abierto y los de cada setter cerrados; se acuerda de lo que elegiste
+let GRP_ABIERTOS={}; try{ GRP_ABIERTOS=JSON.parse(localStorage.getItem("ps-grupos")||"{}")||{}; }catch{}
+function grupoAbierto(m, yo){ return m in GRP_ABIERTOS ? !!GRP_ABIERTOS[m] : m===yo; }
+function alternarGrupo(g){
+  const yo=(YO||"").toLowerCase(); GRP_ABIERTOS[g]=!grupoAbierto(g, yo);
+  try{ localStorage.setItem("ps-grupos", JSON.stringify(GRP_ABIERTOS)); }catch{}
+  renderLeads();
+}
 function renderLeads(){
   actualizarCompletar();
   const q=$("#l-q").value.trim().toLowerCase().replace(/^@/,""), pais=$("#l-pais").value;
@@ -2129,13 +2142,18 @@ function renderLeads(){
     mails.sort((a,b)=>ord(a)-ord(b));
     htmlLista=mails.map(m=>{ const mias=rows.filter(L=>duenoDe(L)===m);
       const nombre = m===yo ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
-      return `<tr class="grupo"><td colspan="9"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}</span></td></tr>`+mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join(""); }).join("");
+      if(!mias.length && (q||FILT||pais)) return "";   // con un filtro activo no se muestran los grupos vacíos
+      const abierto = !!q || grupoAbierto(m, yo);   // si está buscando, se abren todos para que vea lo que encontró
+      const cab = `<tr class="grupo" data-g="${esc(m)}" role="button" tabindex="0" aria-expanded="${abierto}"><td colspan="9"><span class="g-flecha" aria-hidden="true">${abierto?"▾":"▸"}</span><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}${abierto?"":" · tocá para abrir"}</span></td></tr>`;
+      return cab + (abierto ? mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join("") : ""); }).join("");
   } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
   $("#l-body").innerHTML = htmlLista || `<tr><td colspan="9" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
   // las filas de Lucero e Ivan se ven pero no se tocan
   document.querySelectorAll("#l-body tr.ro").forEach(r=>r.querySelectorAll("input,select,button").forEach(i=>i.disabled=true));
 }
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
+$("#l-body").addEventListener("click", e=>{ const g=e.target.closest("tr.grupo"); if(g) alternarGrupo(g.dataset.g); });
+$("#l-body").addEventListener("keydown", e=>{ const g=e.target.closest("tr.grupo"); if(g && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); alternarGrupo(g.dataset.g); } });
 $("#l-q").addEventListener("input", renderLeads);
 $("#l-pais").addEventListener("change", renderLeads);
 $("#l-pais").innerHTML += PAISES.map(p=>`<option value="${p.c}">${p.n}</option>`).join("");

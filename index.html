@@ -2119,15 +2119,34 @@ function renderMensajes(){
   if(document.activeElement!==$("#gpt-url")) $("#gpt-url").value=CFG.gptUrl||"";
   renderLista();
   $("#m-djs").innerHTML = Object.values(LEADS).map(L=>`<option value="@${esc(L.user)}">${esc([L.nombre, PAIS[L.pais]?.n].filter(Boolean).join(" · "))}</option>`).join("");
-  $("#m-tono").innerHTML = [["vos","Argentina · vos"],["tu","Resto · tú"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${MT===v}">${l}</button>`).join("");
+  $("#m-tono").innerHTML = `<button type="button" data-v="vos" aria-pressed="${!PANEL && MT==="vos"}">Argentina · vos</button><button type="button" data-p="res" aria-pressed="${PANEL==="res"}">Resultados</button><button type="button" data-p="inf" aria-pressed="${PANEL==="inf"}">Informes diarios</button>`;
   const grupo=(l,items)=>`<div class="opt-g"><span class="opt-l">${l}</span>${items.map(([k,t])=>`<button type="button" data-op="${esc(k)}">${esc(t)}</button>`).join("")}</div>`;
   $("#c-opts").innerHTML = grupo("Mensajes", OPC)
     + grupo("Objeciones", MSG.filter(m=>m.g==="obj").map(m=>[m.k,m.k]))
     + grupo("Cierre · Renata", MSG.filter(m=>m.g==="cierre").map(m=>[m.k,m.k]));
   renderChat();
 }
+let PANEL=null;   // "res" = Resultados, "inf" = Informes diarios (se muestran en lugar del chat)
+function panelHTML(){
+  const mails = ADMIN ? [...new Set([...(EQ||[]).filter(p=>p.rol!=="admin").map(p=>p.email.toLowerCase()), YO])] : [YO];
+  const nom=m=>m===YO&&ADMIN ? "Renata" : ((EQ||[]).find(p=>p.email.toLowerCase()===m)?.nombre||(PF?.perfiles||[]).find(p=>p.email.toLowerCase()===m)?.nombre||(m||"").split("@")[0]);
+  if(PANEL==="res"){
+    const cols=[["cargados","Leads"],["mensajes","Mensajes"],["seguimientos","Seguim."],["respuestas","Respuestas"],["planes","Planes"],["quieren","Quieren pagar"],["ventas","Ventas"]];
+    return '<div class="card" style="margin:12px"><h2>Resultados</h2><div class="sub" style="margin-bottom:8px">Lo que lleva cada uno según lo que marcó en el CRM</div><table><thead><tr><th></th>'+cols.map(c=>'<th>'+c[1]+'</th>').join("")+'</tr></thead><tbody>'
+      +mails.map(m=>{ const n=numerosDe(m); return '<tr><td><b>'+esc(nom(m))+'</b></td>'+cols.map(c=>'<td class="mono">'+n[c[0]]+'</td>').join("")+'</tr>'; }).join("")+'</tbody></table></div>';
+  }
+  const hoyP=PARTES["parte_"+YO+"_"+hoy()]||{};
+  const campos=[["mensajes","Mensajes"],["seguimientos","Seguimientos"],["respuestas","Respuestas"],["planes","Planes"],["ventas","Ventas"]];
+  const dias=[...new Set(Object.values(PARTES).map(P=>P.dia))].sort().reverse().slice(0,14);
+  const hist=dias.map(d=>'<div style="margin-top:10px"><b>'+corta(d)+'</b>'+Object.values(PARTES).filter(P=>P.dia===d).sort((a,b)=>(a.dueno||"").localeCompare(b.dueno||"")).map(P=>'<div class="paybig"><span>'+esc(nom((P.dueno||"").toLowerCase()))+'</span><span class="sub">'+campos.filter(([k])=>P[k]!=null).map(([k,l])=>'<b>'+P[k]+'</b> '+l.toLowerCase()).join(" · ")+'</span></div>').join("")+'</div>').join("");
+  return '<div class="card" style="margin:12px"><h2>Informe de hoy</h2><div class="sub" style="margin-bottom:8px">Completalo acá o escribilo en el chat: "hoy hicimos 12 mensajes y 1 venta"</div><div class="pf-campos"><div class="two" style="flex-wrap:wrap">'
+    +campos.map(([k,l])=>'<label class="sub">'+l+'<input type="number" min="0" inputmode="numeric" data-inf="'+k+'" value="'+(hoyP[k]!=null?hoyP[k]:"")+'" style="width:100%"></label>').join("")
+    +'</div><div class="acts" style="margin-top:8px"><button class="btn sm pri" type="button" id="inf-guardar">Guardar informe</button><span class="sub" id="inf-msg"></span></div></div>'
+    +(hist?'<h2 style="margin-top:16px">Informes anteriores</h2>'+hist:'')+'</div>';
+}
 function renderChat(){
   const log=$("#c-log");
+  if(PANEL){ log.innerHTML=panelHTML(); $("#c-form").hidden=true; return; }
   $("#c-form").hidden = !SAMPLE;
   const nom=miNombre(), cur=LEADS[CURLEAD];
   const djs=Object.values(LEADS).sort((a,b)=>(b.upd||"").localeCompare(a.upd||"")).slice(0,8);
@@ -2201,7 +2220,16 @@ async function responderIA(dijo){
   }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
-$("#m-tono").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b){ MT=b.dataset.v; renderMensajes(); guardarCharla(); }});
+$("#m-tono").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.p){ PANEL = PANEL===b.dataset.p ? null : b.dataset.p; renderMensajes(); return; }
+  PANEL=null; MT=b.dataset.v; renderMensajes(); guardarCharla(); });
+$("#c-log").addEventListener("click", async e=>{
+  if(e.target.id!=="inf-guardar") return;
+  const campos={}; document.querySelectorAll("#c-log [data-inf]").forEach(i=>{ if(i.value!=="") campos[i.dataset.inf]=Math.max(0,Math.round(+i.value||0)); });
+  if(!Object.keys(campos).length){ $("#inf-msg").textContent="Poné al menos un número."; return; }
+  const n=await cargarParte({campos, dia:hoy()});
+  $("#inf-msg").textContent = n ? "✅ Guardado" : "No se pudo guardar."; if(n) setTimeout(()=>{ if(PANEL==="inf") renderChat(); },900);
+});
 $("#m-nombre").addEventListener("change", ()=>{
   const u=limpiarUser($("#m-nombre").value), L=u && LEADS[idDe(u)];
   if(L) elegirDJ(L); else { CURLEAD=null; guardarCharla(); }
@@ -2223,7 +2251,7 @@ $("#c-gpt").addEventListener("click", async e=>{
   await copiar(armarPrompt(msgs), e.currentTarget);
   window.open(url, "_blank", "noopener"); toast("Copiado: pegalo en ChatGPT (Ctrl+V)", 3000);
 });
-$("#c-new").addEventListener("click", ()=>{ CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); });
+$("#c-new").addEventListener("click", ()=>{ PANEL=null; CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); });
 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado

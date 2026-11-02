@@ -949,6 +949,19 @@ tr.grupo{cursor:pointer;user-select:none}
 tr.grupo:hover td{filter:brightness(1.18)}
 tr.grupo:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85}
+/* Archivos */
+.ar-subir{max-width:760px;margin-bottom:8px}
+.ar-f{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin:12px 0 6px}
+.ar-f input[type=text],.ar-f select{width:100%}
+.ar-f input[type=file]{grid-column:1/-1;font-size:14px}
+.ar-f .btn{justify-self:start}
+.ar-card{padding:4px 18px}
+.ar-fila{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ar-fila:last-child{border-bottom:0}
+.ar-ext{flex:none;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font:700 12px var(--f-mono,monospace);letter-spacing:.04em;background:var(--chip);border:1px solid var(--line);color:var(--accent)}
+.ar-info{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}
+.ar-info b{font-weight:600;font-size:15.5px}
+@media (max-width:640px){.ar-f{grid-template-columns:1fr}}
 </style>
 
 <div class="login" id="login" hidden>
@@ -996,6 +1009,7 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
     <button data-tab="mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg><span>GptPlay</span></button>
     <button data-tab="reporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Reporte</span></button>
     <button data-tab="contenido" id="tab-contenido" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Contenido</span></button>
+    <button data-tab="archivos" id="tab-archivos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Archivos</span></button>
     <button data-tab="perfiles" id="tab-perfiles" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Usuarios</span></button>
   </nav>
   <div class="side-foot">Atajos: teclas 1 a 8 <span class="pie-acts"><button class="btn sm ghost" id="cambiar-clave" hidden>Cambiar contraseña</button><button class="btn sm ghost" id="mi-palabra" hidden>Palabra secreta</button><button class="btn sm ghost" id="logout" hidden>Salir</button></span></div>
@@ -1142,6 +1156,23 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
   </section>
 
   <!-- PERFILES (versión web) -->
+  <section id="v-archivos" hidden>
+    <div class="card ar-subir" id="ar-subir" hidden>
+      <h2>Subir un archivo</h2>
+      <div class="sub">Ebooks que vendan, presentaciones de los planes, guías. Las setters lo descargan desde acá, siempre la última versión.</div>
+      <form id="ar-f" class="ar-f" autocomplete="off">
+        <input type="file" id="ar-file" required aria-label="Archivo">
+        <input type="text" id="ar-nombre" placeholder="Nombre (como lo ven las setters)" required maxlength="120" aria-label="Nombre">
+        <select id="ar-cat" aria-label="Categoría"><option>Ebooks</option><option>Planes y precios</option><option>Guías y plantillas</option><option>Otros</option></select>
+        <input type="text" id="ar-nota" placeholder="Nota (opcional): ej. versión 3, precios nuevos" maxlength="200" aria-label="Nota">
+        <button type="submit" class="btn pri" id="ar-go">Subir</button>
+      </form>
+      <div class="sub" id="ar-msg" aria-live="polite">Hasta 50 MB por archivo.</div>
+    </div>
+    <div id="ar-lista"></div>
+    <input type="file" id="ar-reemp" hidden aria-label="Nueva versión del archivo">
+  </section>
+
   <section id="v-contenido" hidden>
     <div class="card ct-ia">
       <h2>Ideas que funcionan</h2>
@@ -1697,6 +1728,7 @@ function render(){
   if(TAB==="leads") renderLeads();
   if(TAB==="reporte") renderReporte();
   if(TAB==="perfiles") renderPerfiles();
+  if(TAB==="archivos") renderArchivos();
   if(TAB==="contenido"){ renderContenido(); if(document.activeElement!==$("#ec-txt")) $("#ec-txt").value = CFG.estiloContenido ?? ESTILO_CONTENIDO_BASE; }
   if(DRAWER) refreshDrawerStates();
 }
@@ -1709,7 +1741,7 @@ function pageHead(){
   const H={hoy:["CRM de DJs",`${n} DJs cargados`],
     respuestas:["Mensajes","Respondidos y pendientes"],
     cargar:["Cargar DJs","Escribí el @ y apretá Enter"], leads:["Todos los DJs",`${n} cargados`],
-    mensajes:["GptPlay","Escribí qué te respondió y te armo el próximo mensaje"], perfiles:["Usuarios","Leads, mensajes y ventas de cada uno"], reporte:["Reporte","Se arma solo con lo que marcaste"], contenido:["Contenido","Qué subir cada día y dónde"]}[TAB];
+    mensajes:["GptPlay","Escribí qué te respondió y te armo el próximo mensaje"], archivos:["Archivos","Ebooks y presentaciones, siempre la última versión"], perfiles:["Usuarios","Leads, mensajes y ventas de cada uno"], reporte:["Reporte","Se arma solo con lo que marcaste"], contenido:["Contenido","Qué subir cada día y dónde"]}[TAB];
   $("#pg-title").textContent=H[0]; $("#pg-sub").textContent=H[1];
 }
 
@@ -2717,7 +2749,97 @@ $("#ci-f").addEventListener("submit", async e=>{
   }catch(err){ out.textContent=err.message||"No pude buscar ahora."; }
   $("#ci-go").disabled=false;
 });
+/* ---------- Archivos (versión web): ebooks y presentaciones. Renata sube y reemplaza; todas descargan la última versión ---------- */
+let ARCH=[], ARDEL=null, AR_REEMP=null;
+const AR_MAX=50*1024*1024;
+const AR_CATS=["Ebooks","Planes y precios","Guías y plantillas","Otros"];
+const arLimpio=n=>String(n).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9._-]+/g,"_").replace(/^_+|_+$/g,"").slice(-80)||"archivo";
+const arTam=b=>b==null?"":b<1024?b+" B":b<1048576?(b/1024).toFixed(0)+" KB":(b/1048576).toFixed(1).replace(".",",")+" MB";
+const arExt=(nombre,tipo)=>{ const m=String(nombre||"").match(/\.([A-Za-z0-9]{1,5})$/); const e=(m?m[1]:"").toUpperCase(); return e||(String(tipo||"").split("/")[1]||"ARCH").slice(0,4).toUpperCase(); };
+const arFecha=t=>{ try{ return new Date(t).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }catch{ return ""; } };
+async function cargarArchivos(){
+  if(!SB) return;
+  const {data,error}=await SB.from("archivos").select("*").order("updated_at",{ascending:false});
+  if(error){ $("#ar-msg").textContent="No pude cargar los archivos. Probá de nuevo."; return; }
+  ARCH=data||[]; renderArchivos();
+}
+function renderArchivos(){
+  const box=$("#ar-lista"); if(!box) return;
+  $("#ar-subir").hidden=!ADMIN;
+  if(!SB){ box.innerHTML=`<div class="sub">Los archivos están en la versión web.</div>`; return; }
+  if(!ARCH.length){ box.innerHTML=`<div class="empty">${ADMIN?"Todavía no subiste nada. Usá el cuadro de arriba.":"Todavía no hay archivos. Renata va a subir acá los ebooks y las presentaciones."}</div>`; return; }
+  const cats=[...AR_CATS,...new Set(ARCH.map(a=>a.categoria).filter(c=>!AR_CATS.includes(c)))];
+  box.innerHTML=cats.map(c=>{
+    const fs=ARCH.filter(a=>a.categoria===c); if(!fs.length) return "";
+    return `<h2 class="h2s">${esc(c)}</h2><div class="card ar-card">`+fs.map(a=>{
+      const nuevo=Date.now()-new Date(a.updated_at).getTime()<7*864e5;
+      const acciones = ADMIN
+        ? (ARDEL===a.id
+            ? `<span class="sub">¿Borrar?</span><button type="button" class="btn sm danger" data-ar-borrar="${esc(a.id)}">Sí</button><button type="button" class="btn sm ghost" data-ar-no>No</button>`
+            : `<button type="button" class="btn sm" data-ar-reemp="${esc(a.id)}">Reemplazar</button><button type="button" class="btn sm ghost danger" data-ar-del="${esc(a.id)}">Borrar</button>`)
+        : "";
+      return `<div class="ar-fila"><span class="ar-ext">${esc(arExt(a.archivo,a.tipo))}</span>
+        <div class="ar-info"><b>${esc(a.nombre)}</b>${nuevo?` <span class="tag">Nuevo</span>`:""}
+          ${a.nota?`<span class="sub">${esc(a.nota)}</span>`:""}
+          <span class="sub">${esc(arTam(a.tamano))} · actualizado ${esc(arFecha(a.updated_at))}</span></div>
+        <div class="acts"><button type="button" class="btn sm pri" data-ar-bajar="${esc(a.id)}">Descargar</button>${acciones}</div></div>`;
+    }).join("")+`</div>`;
+  }).join("");
+}
+// subir un archivo nuevo (solo Renata)
+$("#ar-file").addEventListener("change", ()=>{ const f=$("#ar-file").files[0]; if(f && !$("#ar-nombre").value) $("#ar-nombre").value=f.name.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ").trim(); });
+$("#ar-f").addEventListener("submit", async e=>{
+  e.preventDefault(); const f=$("#ar-file").files[0]; if(!f||!SB||!ADMIN) return;
+  if(f.size>AR_MAX){ $("#ar-msg").textContent="Pesa más de 50 MB. Achicalo y probá de nuevo."; return; }
+  const nombre=$("#ar-nombre").value.trim(); if(!nombre) return;
+  $("#ar-go").disabled=true; $("#ar-msg").textContent="Subiendo… no cierres la página.";
+  try{
+    const id=crypto.randomUUID(), ruta=id+"/"+Date.now()+"_"+arLimpio(f.name);
+    const {error:e1}=await SB.storage.from("archivos").upload(ruta,f,{contentType:f.type||"application/octet-stream"});
+    if(e1){ $("#ar-msg").textContent="No se pudo subir: "+(e1.message||"error"); return; }
+    const {error:e2}=await SB.from("archivos").insert({id, categoria:$("#ar-cat").value, nombre, nota:$("#ar-nota").value.trim()||null, ruta, archivo:f.name, tamano:f.size, tipo:f.type||null, subido_por:YO});
+    if(e2){ await SB.storage.from("archivos").remove([ruta]); $("#ar-msg").textContent="Se subió pero no se pudo guardar. Probá de nuevo."; return; }
+    $("#ar-f").reset(); $("#ar-msg").textContent="Listo: "+nombre+" ya lo pueden descargar ✓"; cargarArchivos();
+  }catch{ $("#ar-msg").textContent="No se pudo subir. Revisá la conexión."; }
+  finally{ $("#ar-go").disabled=false; }
+});
+// descargar, reemplazar y borrar
+$("#ar-reemp").addEventListener("change", async e=>{
+  const f=e.target.files[0]; const a=ARCH.find(x=>x.id===AR_REEMP); if(!f||!a||!ADMIN) return;
+  if(f.size>AR_MAX){ toast("Pesa más de 50 MB. Achicalo y probá de nuevo.", 4000); return; }
+  toast("Subiendo la nueva versión…", 8000);
+  try{
+    const ruta=a.id+"/"+Date.now()+"_"+arLimpio(f.name);
+    const {error:e1}=await SB.storage.from("archivos").upload(ruta,f,{contentType:f.type||"application/octet-stream"});
+    if(e1){ toast("No se pudo subir: "+(e1.message||"error"), 4000); return; }
+    const {error:e2}=await SB.from("archivos").update({ruta, archivo:f.name, tamano:f.size, tipo:f.type||null, subido_por:YO, updated_at:new Date().toISOString()}).eq("id",a.id);
+    if(e2){ await SB.storage.from("archivos").remove([ruta]); toast("No se pudo guardar el cambio.", 4000); return; }
+    if(a.ruta && a.ruta!==ruta) await SB.storage.from("archivos").remove([a.ruta]);
+    toast("Listo: ya todas ven la última versión ✓", 4000); cargarArchivos();
+  }catch{ toast("No se pudo subir. Revisá la conexión.", 4000); }
+});
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-ar-bajar],[data-ar-reemp],[data-ar-del],[data-ar-borrar],[data-ar-no]"); if(!b) return;
+  if(b.hasAttribute("data-ar-no")){ ARDEL=null; renderArchivos(); return; }
+  const id=b.dataset.arBajar||b.dataset.arReemp||b.dataset.arDel||b.dataset.arBorrar; const a=ARCH.find(x=>x.id===id); if(!a) return;
+  if(b.dataset.arBajar){
+    b.disabled=true;
+    const {data,error}=await SB.storage.from("archivos").createSignedUrl(a.ruta,120,{download:a.archivo||true});
+    b.disabled=false;
+    if(error||!data){ toast("No pude descargar. Probá de nuevo.", 4000); return; }
+    const l=document.createElement("a"); l.href=data.signedUrl; l.download=a.archivo||""; l.rel="noopener"; document.body.appendChild(l); l.click(); l.remove();
+  } else if(b.dataset.arReemp){ AR_REEMP=id; $("#ar-reemp").value=""; $("#ar-reemp").click(); }
+  else if(b.dataset.arDel){ ARDEL=id; renderArchivos(); }
+  else if(b.dataset.arBorrar){
+    ARDEL=null; b.disabled=true;
+    await SB.storage.from("archivos").remove([a.ruta]);
+    const {error}=await SB.from("archivos").delete().eq("id",a.id);
+    toast(error?"No se pudo borrar.":"Archivo borrado", 3000); cargarArchivos();
+  }
+});
+
 function setTab(t){
+  if(t==="archivos" && !SB) t="hoy";   // los archivos viven en la versión web
   if(t==="cargar"||t==="leads") t="hoy";   // cargar y ver todos los DJs ahora viven dentro del CRM
   if(t==="contenido" && SB && !ADMIN) t="hoy";   // Contenido es solo de Renata
   TAB=t; document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
@@ -2725,13 +2847,14 @@ function setTab(t){
   try{ localStorage.setItem("cs-tab",t); }catch{}
   document.querySelector("#tabs button[aria-selected=true]")?.scrollIntoView({inline:"center", block:"nearest"});
   if(t==="mensajes") renderMensajes();
+  if(t==="archivos") cargarArchivos();
   render();
 }
 $("#tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) setTab(b.dataset.tab); });
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape" && DRAWER) return closeDrawer();
   if(e.target.matches("input,textarea,select") || e.ctrlKey || e.metaKey || e.altKey) return;
-  const t=["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles","contenido"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
+  const t=["hoy","respuestas","cargar","leads","mensajes","reporte","perfiles","contenido","archivos"][+e.key-1]; if(t) { e.preventDefault(); setTab(t); }
 });
 
 /* ---------- arranque ---------- */
@@ -2749,6 +2872,7 @@ document.addEventListener("keydown", e=>{
     if(ADMIN){ await cargarEquipo(); cargarDuplicados(); setInterval(cargarDuplicados, 60000); }
     store = supaStore(sb);
     $("#tab-perfiles").hidden=false;
+    $("#tab-archivos").hidden=false;
     $("#logout").hidden=false; $("#cambiar-clave").hidden=false; $("#mi-palabra").hidden=false;
     $("#mi-palabra").onclick=abrirPalabra;
     $("#cambiar-clave").onclick=()=>{ $("#clave").hidden=false; $("#clave-msg").textContent=""; $("#clave-1").focus(); };

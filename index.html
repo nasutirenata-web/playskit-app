@@ -915,6 +915,7 @@ tr.pend-resp .prio{font-weight:700}
 .bq-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .bq-row .sub{margin-left:auto}
 #bq-n{width:auto;max-width:80px}
+.l-comp{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 </style>
 
 <div class="login" id="login" hidden>
@@ -1070,6 +1071,7 @@ tr.pend-resp .prio{font-weight:700}
     <div class="toolbar">
       <input type="search" id="l-q" placeholder="Buscar @, nombre, nota…">
       <select id="l-pais" aria-label="Filtrar por país"><option value="">Todos los países</option></select>
+      <span id="l-comp" class="l-comp" hidden><button type="button" class="btn sm" id="l-completar">Completar datos</button><span id="l-comp-ask" hidden><span class="sub" id="l-comp-txt"></span> <button type="button" class="btn sm pri" id="l-comp-si">Sí, completar</button> <button type="button" class="btn sm ghost" id="l-comp-no">No</button></span></span>
     </div>
     <div class="funnel" id="l-funnel"></div>
     <div id="crm-cols" hidden style="margin-top:12px"></div>
@@ -1855,12 +1857,18 @@ function initCargar(){
   // pegar el perfil carga el DJ directo en el CRM (si se pega también el texto del perfil, toma seguidores y link de la bio)
   // busca en Google los seguidores y la bio del perfil (con la IA); es una ayuda, conviene mirar que estén bien
   const segTxtN=s=>String(s).toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
-  const autoInfo = async L=>{
-    // pide el perfil a Supabase (Apify, plan gratis); si todavía no está la clave de Apify, no hace nada y se completa a mano
+  /*COMPLETAR-INI*/
+  // un DJ "incompleto" es el que le falta el número de seguidores o el de publicaciones
+  const faltaDato = L => !L.seguidores || !L.posts;
+  // autoInfo: pide el perfil a Supabase (Apify, plan gratis). Devuelve "ok", "vacio", "sinClave" o "error"; quiet = sin avisos
+  const autoInfo = async (L, quiet)=>{
     try{
       const {data, error} = await SB.functions.invoke("chat", {body:{perfil:L.user}});
-      if(error || !data || data.sinClave || data.vacio) return;
-      const cur=LEADS[L.id]; if(!cur) return; const n={...cur};
+      if(error || !data) return "error";
+      if(data.sinClave) return "sinClave";
+      const cur=LEADS[L.id]; if(!cur) return "error";
+      if(data.vacio){ await store.put({...cur, intento:hoy()}); return "vacio"; }   // perfil privado o que no existe: no se vuelve a probar por 7 días
+      const n={...cur};
       if(data.seguidores!=null && !cur.seguidores) n.seguidores=segTxtN(data.seguidores);
       if(data.publicaciones!=null && !cur.posts) n.posts=String(data.publicaciones);
       if(data.actividad!=null && !cur.act30) n.act30=String(data.actividad);
@@ -1870,10 +1878,41 @@ function initCargar(){
         n.bio = !link ? "Nada" : /linktr|beacons|lnk.bio|bio.site|taplink|campsite|solo.to|linkin.bio/.test(link) ? "Linktree" : /drive.google|dropbox|docs.google/.test(link) ? "Drive" : "Plantilla";
       }
       if(data.nombre && !cur.nombre) n.nombre=String(data.nombre).split(" ")[0];
+      if(faltaDato(n)) n.intento=hoy();   // Apify no tenía alguno de los datos: no se insiste cada vez
       n.prio=prioDe(n).k; await store.put(n);
-      toast("@"+L.user+": datos encontrados · prioridad "+prioDe(n).n, 3500);
-    }catch{}
+      if(!quiet) toast("@"+L.user+": datos encontrados · prioridad "+prioDe(n).n, 3500);
+      return "ok";
+    }catch{ return "error"; }
   };
+  // Completar datos de los ya cargados: solo los propios (los de otra setter son de solo lectura), de a 3 a la vez
+  const pendientesDatos = ()=>Object.values(LEADS).filter(L=>faltaDato(L) && (L.dueno||YO||"").toLowerCase()===(YO||"").toLowerCase() && !(L.intento && L.intento>=sumar(hoy(),-7)));
+  let COMPLETANDO=false;
+  const completarTodos = async()=>{
+    if(COMPLETANDO) return; const lista=pendientesDatos(); if(!lista.length) return;
+    COMPLETANDO=true; let hechos=0, ok=0, fallos=0, corte=false, idx=0;
+    const btn=$("#l-completar"); const pintar=()=>{ if(btn) btn.textContent="Completando "+hechos+"/"+lista.length+"…"; };
+    pintar();
+    const obrero=async()=>{
+      while(idx<lista.length && !corte){
+        const L=lista[idx++]; const r=await autoInfo(L, true); hechos++;
+        if(r==="ok"){ ok++; fallos=0; } else if(r==="sinClave"){ corte=true; } else if(r==="error"){ fallos++; if(fallos>=3) corte=true; }
+        pintar();
+      }
+    };
+    await Promise.all([obrero(), obrero(), obrero()]);
+    COMPLETANDO=false;
+    toast(corte ? "Frené: Apify no responde o no queda crédito. Completé "+ok+" de "+lista.length+"." : "Listo: completé "+ok+" de "+lista.length+". Los que faltan no tienen esos datos públicos.", 7000);
+    actualizarCompletar();
+  };
+  window.PS_completar={cuantos:()=>pendientesDatos().length, corriendo:()=>COMPLETANDO};
+  $("#l-completar").addEventListener("click", ()=>{
+    const n=pendientesDatos().length; if(!n) return;
+    $("#l-comp-txt").textContent="¿Completar "+n+" DJs? Gasta unos US$"+(n*0.0027).toFixed(2).replace(".",",")+" del plan gratis de Apify.";
+    $("#l-comp-ask").hidden=false; $("#l-completar").hidden=true;
+  });
+  $("#l-comp-no").addEventListener("click", ()=>{ $("#l-comp-ask").hidden=true; $("#l-completar").hidden=false; });
+  $("#l-comp-si").addEventListener("click", ()=>{ $("#l-comp-ask").hidden=true; $("#l-completar").hidden=false; completarTodos(); });
+  /*COMPLETAR-FIN*/
   const cargarPegado = async()=>{
     const raw=$("#lupa-pega").value.trim(); if(!raw) return;
     const tok=(raw.match(/instagram\.com\/[^\s/?#]+/i)||raw.match(/@[\w.]+/)||[raw.split(/\s/)[0]])[0];
@@ -1902,7 +1941,7 @@ function initCargar(){
       estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
     L.prio=prioDe(L).k; $("#lupa-q").value="";
     await store.put(L);
-    if(SB && !L.seguidores && !L.posts) setTimeout(()=>autoInfo(L), 100);
+    if(SB && (!L.seguidores || !L.posts)) setTimeout(()=>autoInfo(L), 100);
     toast(L.seguidores||L.posts||L.bio ? `@${u} cargado · prioridad ${prioDe(L).n}` : `@${u} cargado · completá seguidores y bio en su fila`);
   };
   $("#lupa-g").addEventListener("submit", e=>{ e.preventDefault(); cargarPegado(); });
@@ -2033,8 +2072,15 @@ $("#bq-res").addEventListener("click", async e=>{
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
   L.prio=prioDe(L).k; await store.put(L); b.disabled=true; b.textContent="Agregado ✓"; toast("@"+u+" agregado · "+prioDe(L).n);
 });
-var ABIERTO=null;   // cuenta abierta en la lista de Renata (null = la suya)
+function actualizarCompletar(){
+  const w=$("#l-comp"); if(!w) return; const api=window.PS_completar;
+  if(typeof SB==="undefined" || !SB || !api){ w.hidden=true; return; }
+  if(api.corriendo()) return;
+  const n=api.cuantos(); w.hidden = n===0;
+  const b=$("#l-completar"); if(b) b.textContent="Completar datos ("+n+")";
+}
 function renderLeads(){
+  actualizarCompletar();
   const q=$("#l-q").value.trim().toLowerCase().replace(/^@/,""), pais=$("#l-pais").value;
   const all=Object.values(LEADS).filter(L=>!pais||L.pais===pais);
   const cnt={}; all.forEach(L=>cnt[L.estado]=(cnt[L.estado]||0)+1);
@@ -2055,15 +2101,12 @@ function renderLeads(){
     mails.sort((a,b)=>ord(a)-ord(b));
     htmlLista=mails.map(m=>{ const mias=rows.filter(L=>duenoDe(L)===m);
       const nombre = m===yo ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
-      const abierto = (ABIERTO||yo)===m;
-      return `<tr class="grupo" data-g="${esc(m)}" style="cursor:pointer" title="Tocá para abrir o cerrar"><td colspan="9">${abierto?"▾":"▸"} <b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}</span></td></tr>`+(!abierto?"":mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join("")); }).join("");
+      return `<tr class="grupo"><td colspan="9"><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}</span></td></tr>`+mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join(""); }).join("");
   } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
   $("#l-body").innerHTML = htmlLista || `<tr><td colspan="9" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
   // las filas de Lucero e Ivan se ven pero no se tocan
   document.querySelectorAll("#l-body tr.ro").forEach(r=>r.querySelectorAll("input,select,button").forEach(i=>i.disabled=true));
 }
-// tocás un nombre (Lucero, Iván, el tuyo) y se abre ese y se cierran los otros
-$("#l-body").addEventListener("click", e=>{ const g=e.target.closest("tr.grupo"); if(!g) return; ABIERTO=g.dataset.g; renderLeads(); });
 $("#l-funnel").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; FILT=b.dataset.f; renderLeads(); });
 $("#l-q").addEventListener("input", renderLeads);
 $("#l-pais").addEventListener("change", renderLeads);

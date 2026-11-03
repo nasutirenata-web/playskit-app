@@ -2278,9 +2278,9 @@ async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta
     const fuera=antes-nuevos.length;
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
-    const cargados=[]; let sig=0;
+    BUSQ_Q=String(natural&&variantes?variantes[0]:q).slice(0,50); const cargados=[]; let sig=0;
     await Promise.all(Array.from({length:5},async()=>{ while(sig<nuevos.length){ const r=nuevos[sig++]; try{ if(await agregarBQ(r, para, true)) cargados.push(r); }catch{} slot.txt="Cargando DJs a tu lista… "+cargados.length+" de "+nuevos.length; renderChat(); } }));
-    const rep=todos.length-cargados.length;
+    BUSQ_Q=""; const rep=todos.length-cargados.length;
     if(!cargados.length && !extra){   // no salió nada nuevo: prueba solo con otras búsquedas parecidas, sin pedirle nada a la setter
       slot.txt="No salió nada nuevo, pruebo con otras búsquedas parecidas…"; renderChat();
       const plan2=await entenderBusqueda(q+"\n(Ya probé con: "+variantes.join(", ")+". Dame consultas DISTINTAS: sinónimos, otros géneros, otras ciudades o países parecidos.)");
@@ -2291,13 +2291,14 @@ async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
+let BUSQ_Q="";   // la búsqueda que está cargando el chat (queda anotada en cada DJ)
 async function agregarBQ(r, para, rapido){   // rapido: ya se chequearon repetidos, no vuelve a preguntar ni avisa uno por uno
   const duenio=(para||YO||"").toLowerCase()||null;   // la admin puede cargar los DJs a la lista de otra setter
   const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
   if(par){ if(!rapido) toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
   if(SB && !rapido){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
-  const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", tipo:tipoDe((r.bio||"")+" "+(r.nombre||"")+" "+(r.user||"")), bioTxt:String(r.bio||"").slice(0,200), nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
+  const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", busq:BUSQ_Q||"", tipo:tipoDe((r.bio||"")+" "+(r.nombre||"")+" "+(r.user||"")), bioTxt:String(r.bio||"").slice(0,200), nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(duenio?{por:{cargado:YO||duenio}, dueno:duenio}:{})};
   L.prio=prioDe(L).k; await store.put(L); if(!rapido) toast("@"+u+" agregado · "+prioDe(L).n); return true;
 }
@@ -2457,6 +2458,16 @@ function agregarPlantilla(k){
 }
 // arma las instrucciones completas para la IA (sirve para el chat de la app y para pegar en ChatGPT)
 // resumen de lo que hay cargado en la cuenta de quien pregunta (la IA no ve nada más que esto)
+function resumenCargas(lista){
+  if(!lista.length) return "Todavía no se cargó ningún DJ con búsquedas del chat.";
+  const porDia={}; lista.forEach(L=>{ const d=L.cargado||"sin fecha"; (porDia[d]=porDia[d]||[]).push(L); });
+  const hace7=sumar(hoy(),-6), hoyN=lista.filter(L=>L.cargado===hoy()).length, sem=lista.filter(L=>L.cargado&&L.cargado>=hace7).length;
+  const dias=Object.keys(porDia).sort().reverse().slice(0,7).map(d=>{ const qs=[...new Set(porDia[d].map(L=>L.busq).filter(Boolean))].slice(0,2); return "• "+(d==="sin fecha"?d:corta(d))+": "+porDia[d].length+(qs.length?" ("+qs.join(", ")+")":""); });
+  const tipos=["DJ","DJ productor","Productor"].map(t=>t+" "+lista.filter(L=>L.tipo===t).length).join(" · ")+" · sin tipo "+lista.filter(L=>!L.tipo).length;
+  let t="Se cargaron "+lista.length+" DJs con búsquedas del chat (hoy "+hoyN+", últimos 7 días "+sem+").\n"+dias.join("\n")+"\nTipos: "+tipos;
+  if(ADMIN){ const por={}; lista.forEach(L=>{ const d=String(L.dueno||"").toLowerCase(); por[d]=(por[d]||0)+1; }); t+="\nPor persona: "+Object.keys(por).sort((a,b)=>por[b]-por[a]).map(d=>nomMail(d)+" "+por[d]).join(" · "); }
+  return t;
+}
 function datosApp(){
   const yo=(YO||"").toLowerCase();
   const L=Object.values(LEADS).filter(x=>!x.parte && (ADMIN || !x.dueno || String(x.dueno).toLowerCase()===yo));
@@ -2473,6 +2484,7 @@ function datosApp(){
   t+="Bio: "+["Linktree","Nada","Drive","Plantilla","Otra"].map(b=>b+" "+cuenta(L,x=>x.bio===b)).join(", ")+"\n";
   if(ADMIN){ const g={}; L.forEach(x=>{ const k=String(x.dueno||"").toLowerCase(); (g[k]=g[k]||[]).push(x); }); t+="POR SETTER:\n"+Object.entries(g).map(([m,arr])=>"- "+nombreDe(m)+": "+resumen(arr)).join("\n")+"\n"; }
   const lista=L.slice().sort((a,b)=>(b.cargado||"").localeCompare(a.cargado||"")).slice(0,80).map(x=>"@"+x.user+" ("+[x.tipo,x.estado,ADMIN&&x.dueno?nombreDe(x.dueno):""].filter(Boolean).join(", ")+")").join("; ");
+  t+="CARGADOS POR BÚSQUEDAS DEL CHAT (memoria):\n"+resumenCargas(L.filter(x=>x.fuente==="Búsqueda"))+"\n";
   return t+"Últimos DJs cargados: "+(lista||"ninguno");
 }
 const ESTRATEGIA_MSJ = "ESTRATEGIA DE MENSAJES (método SPIN adaptado a chat, con conexión antes y PAS en los seguimientos). Seguila siempre:\nCamino: día 0 calentar (like a 2 posts y respuesta real a una historia, no se vende) → día 1 apertura (mensaje A, B o C, con una primera línea que nombre algo real de su perfil) → si responde, SPIN en 4 mensajes → prueba: la web de Lucas → 2 planes → WhatsApp con Renata, que cierra.\nReglas de oro: una sola pregunta por mensaje; mensajes cortos, sin tecnicismos; usá SUS palabras; no pases al paso siguiente hasta que conteste; sin link ni precio hasta el paso de la prueba. El DJ tiene que hablar más que la setter: si la setter escribe más que él, está vendiendo en vez de preguntar.\nSPIN en 4 mensajes, uno por vez:\nS Situación (la única con dos partes): ¿Y hoy cómo conseguís las fechas? ¿Y qué te gustaría lograr este año?\nP Problema: ¿Y qué es lo que más te frena para tocar en más lugares? Si no sabe qué decir: ¿Te pasa que no te contestan, que no sabés qué mandar o que lo que mandás no se ve tan pro?\nI Implicación (la que mueve): ¿Te pasó que un boliche te pida material y la fecha no se cierre? Si dice que sí: ¿Cuántas fechas te parece que se pueden haber caído así? No agrandes el problema: preguntá y dejá que conteste.\nN Necesidad-beneficio: Si tuvieras un solo link con tus sets, fotos, rider y contacto, listo para mandar en 10 segundos, ¿cómo cambiaría eso? Lo que diga se repite en el cierre.\nPuente a la prueba: Justo eso hacemos. Mirá lo que armamos para Lucas, otro DJ (captura de la web de Lucas, sin link). ¿Te gustaría algo así con tu estilo? Si dice que sí: los 2 planes (Professional US$80, Premium US$150) y después WhatsApp con Renata.\nSi el DJ contesta distinto: 'Tengo Linktree' → Está bien para arrancar. ¿Te pasó que te pidan presskit y no sepas qué mandar? (va a I). 'Me escriben solos, no necesito' → misma pregunta de Implicación (va a P). '¿Cuánto sale?' → Genial. ¿Y a los lugares donde todavía no tocaste, cómo les escribís? (después prueba y planes). 'Pasame info' → Hay 2 planes, desde US$80. Antes mirá lo que hicimos para Lucas (prueba y planes). 'Ahora no' → Dale, ¿te escribo en un mes? (marcar fecha). Respuesta de una palabra → mismo paso, reformulá la pregunta más fácil. Habla de plata → ¿Cuánto te pagan por fecha? Con una que consigas, la web se paga sola.\nSeguimientos (PAS), solo si no contestó, uno por día marcado, cortos, sin repetir el primer mensaje: Día 2: [nombre], ¿pudiste ver mi mensaje? Me quedé pensando en tu [set en lugar]. ¿Qué es lo primero que mandás cuando querés tocar en un lugar nuevo? Día 5: Mucho DJ pierde fechas por mandar el material desordenado. Te dejo un ejemplo de cómo queda todo en un solo link (captura de la web de Lucas). ¿Qué sumarías de lo tuyo para que un boliche te elija? Día 10: Cierro por acá. Si algún día querés tu presskit web, escribime. ¿Conocés a algún DJ al que le pueda servir? Día 30 (solo si tiene una novedad real en su perfil): Hola [nombre]! Vi que tocaste en [lugar nuevo / fecha reciente]. Felicitaciones. ¿Ya tenés tu material ordenado para los próximos lugares?\nTono: preguntas muy cortas y bajas, como escribe una persona normal por Instagram (estilo NEPQ). Objeciones: aceptar, preguntar, reencuadrar, guiar (método de Agus).\nRitmo: semana 1 son 15 mensajes nuevos por día, semana 2 son 25, desde la 3 son 30; máximo 10 por hora; cambiar siempre la primera línea; si Instagram da una advertencia, frenar 48 horas. Menos de 10% de respuesta: cambiar la apertura o revisar el perfil de la setter. Se prueba A/B de la apertura la primera semana (A, B y C a la misma cantidad de DJs) y se queda la que tenga más respuestas.\nNúmeros que se miran todos los días: % respuesta (respondieron ÷ enviados), % llega a la I, % pide planes, % pasa a WhatsApp.";
@@ -2655,6 +2667,9 @@ $("#c-form").addEventListener("submit", e=>{
   const respuesta=txt=>{ $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", txt}); renderChat(); guardarCharla(); };
   if(/^\s*(ayuda|help|\/ayuda)\s*$|qu[eé] (pod[eé]s|puedes|sab[eé]s) hacer|qu[eé] comandos|c[oó]mo (te )?uso/i.test(v)){
     return respuesta("Esto sé hacer:\n• Buscar DJs o productores nuevos y cargarlos a tu lista, sin repetidos ni DJs con web propia: «busca DJs de techno» o /buscar dj techno rosario.\n• Decirte cuántos créditos de Apify te quedan: «cuántos créditos tengo».\n• Decirte cuántos DJs tenés cargados: «cuántos DJs tengo».\n• Conectar tu Apify: pegá tu token (apify_api_…).\n• Armar el próximo mensaje para un DJ: pegá lo que te respondió.\nTodos tus chats quedan guardados a la izquierda."); }
+  if(/\bcargaste\b|\bcargaron\b|\bme cargas(te)?\b|\bcargado vos\b|\bcarg[oó] el chat\b/i.test(v) && /cu[aá]nt|total|hoy|ayer|semana|cu[aá]les|lista|resumen/i.test(v)){
+    const yo=(YO||"").toLowerCase();
+    return respuesta(resumenCargas(Object.values(LEADS).filter(L=>L.fuente==="Búsqueda" && (ADMIN || (L.dueno||yo||"").toLowerCase()===yo)))); }
   if(/cu[aá]nt[oa]s\s+(djs?|leads?|perfiles|contactos)/i.test(v) && /tengo|hay|cargu?[eé]|cargados|llevo|tenemos/i.test(v)){
     const yo=(YO||"").toLowerCase(), todos=Object.values(LEADS), mios=todos.filter(L=>(L.dueno||yo||"").toLowerCase()===yo);
     const cuenta=(lista,f)=>lista.filter(f).length;

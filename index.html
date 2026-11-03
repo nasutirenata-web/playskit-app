@@ -962,6 +962,20 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
 .ar-info{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}
 .ar-info b{font-weight:600;font-size:15.5px}
 @media (max-width:640px){.ar-f{grid-template-columns:1fr}}
+/* Conversaciones: seguimiento (violeta) y cerradas (celeste) */
+:root:root .cv.seg{box-shadow:inset 3px 0 0 #a78bfa}
+:root:root .cv.si{box-shadow:inset 3px 0 0 #3fd8e2}
+:root:root .cv.no{box-shadow:none;opacity:1}
+:root:root .cv-res .r.seg,:root:root .cv-res .r.si{width:24px;height:24px;border-width:2px;border-style:solid;background:transparent;color:transparent}
+:root:root .cv-res .r.seg{border-color:#a78bfa}
+:root:root .cv-res .r.si{border-color:#3fd8e2}
+:root:root .cv-res .r.seg[aria-pressed="true"]{background:#a78bfa;box-shadow:0 0 10px rgba(167,139,250,.55)}
+:root:root .cv-res .r.si[aria-pressed="true"]{background:#3fd8e2;box-shadow:0 0 10px rgba(63,216,226,.55)}
+:root:root .cv-res .r.seg:hover,:root:root .cv-res .r.si:hover{color:transparent}
+.convs-sum .cs{display:inline-flex;align-items:center;gap:6px}
+.convs-sum .cs i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.convs-sum .cs.seg i{background:#a78bfa}
+.convs-sum .cs.cer i{background:#3fd8e2}
 </style>
 
 <div class="login" id="login" hidden>
@@ -2593,7 +2607,7 @@ $("#c-gpt").addEventListener("click", async e=>{
 const chatNuevo=()=>{ PANEL=null; CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); };
 $("#c-new").addEventListener("click", chatNuevo); $("#c-new2").addEventListener("click", chatNuevo);
 
-/* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
+/* Conversaciones guardadas: cada charla se guarda sola; círculo violeta = en seguimiento, celeste = cerrada */
 let CV_GRP={}; try{ CV_GRP=JSON.parse(localStorage.getItem("ps-grupos-chats")||"{}")||{}; }catch{}
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado
 function guardarCharla(){
@@ -2615,9 +2629,9 @@ function renderLista(){
   const el=$("#cv-list"); if(!el) return;
   const all=Object.values(CHARLAS).sort((a,b)=>(b.upd||0)-(a.upd||0));
   const n=r=>all.filter(C=>(C.resultado||"")===r).length;
-  $("#cv-sum").innerHTML=`<span class="si">${ic("ok","sm")}${n("si")} vendidas</span><span class="no">✗ ${n("no")} no</span><span>${n("")} abiertas</span>`;
-  $("#cv-f").innerHTML=[["","Todas"],["si","Vendidas"],["no","No"],["abierta","Abiertas"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${CVF===v}">${l}</button>`).join("");
-  const vis=all.filter(C=>!CVF || (CVF==="abierta" ? !C.resultado : C.resultado===CVF));
+  $("#cv-sum").innerHTML=`<span class="cs seg"><i></i>${n("seg")} en seguimiento</span><span class="cs cer"><i></i>${n("si")} cerradas</span>`;
+  $("#cv-f").innerHTML=[["","Todas"],["seg","Seguimiento"],["si","Cerradas"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${CVF===v}">${l}</button>`).join("");
+  const vis=all.filter(C=>!CVF || C.resultado===CVF);
   const item=C=>{
     const ult=[...(C.msgs||[])].reverse().find(m=>m.de==="dj");
     return `<div class="cv ${C.id===CUR?"on":""} ${C.resultado||""}" data-cv="${C.id}">
@@ -2625,7 +2639,7 @@ function renderLista(){
         ${ult?`<span class="cv-ult">“${esc(ult.txt.slice(0,70))}”</span>`:""}</div>
       <div class="cv-res">${CVDEL===C.id
         ? `<span class="sub">¿Borrar?</span><button type="button" class="btn sm danger" data-cvok>Sí</button><button type="button" class="btn sm ghost" data-cvno>No</button>`
-        : `<button type="button" class="r si" data-res="si" aria-pressed="${C.resultado==="si"}" title="Vendida" aria-label="Vendida">✓</button><button type="button" class="r no" data-res="no" aria-pressed="${C.resultado==="no"}" title="No se vendió" aria-label="No se vendió">✗</button><button type="button" class="r del" data-cvdel title="Borrar conversación" aria-label="Borrar conversación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}</div></div>`;
+        : `<button type="button" class="r seg" data-res="seg" aria-pressed="${C.resultado==="seg"}" title="En seguimiento" aria-label="En seguimiento"></button><button type="button" class="r si" data-res="si" aria-pressed="${C.resultado==="si"}" title="Cerrada" aria-label="Cerrada"></button><button type="button" class="r del" data-cvdel title="Borrar conversación" aria-label="Borrar conversación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}</div></div>`;
   };
   const vacio=`<div class="empty" style="padding:10px 4px">${all.length?"Nada con ese filtro.":"Todavía no hay chats. Escribí algo y se guarda solo."}</div>`;
   if(!vis.length){ el.innerHTML=vacio; return; }

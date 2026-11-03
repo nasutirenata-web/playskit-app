@@ -2178,8 +2178,14 @@ async function buscarEnChat(q, para){
     if(!SB) throw new Error("La búsqueda funciona en la versión web.");
     // 3 búsquedas parecidas al mismo tiempo (50 cada una): salen más DJs distintos y no se espera una atrás de otra
     const base=q.replace(/s+/g," ").trim(), conDj=/djs?/i.test(base);
-    const variantes=[base, conDj?base+" music":"dj "+base, conDj?base+" productor":base+" djs"];
-    const res=await Promise.allSettled(variantes.map(v=>SB.functions.invoke("chat",{body:{buscar:v, limite:50, apify:miApify()}})));
+    const variantes=[base, conDj?base+" music":"dj "+base];
+    let res=await Promise.allSettled(variantes.map(v=>SB.functions.invoke("chat",{body:{buscar:v, limite:40, apify:miApify()}})));
+    // si en paralelo no vino nada (Apify gratis a veces rechaza 2 búsquedas juntas), reintenta con una sola como antes
+    const vacio=r=>r.status!=="fulfilled"||r.value.error||!(r.value.data&&r.value.data.resultados&&r.value.data.resultados.length);
+    if(res.every(vacio) && !res.some(r=>r.status==="fulfilled"&&r.value.data&&r.value.data.sinClave)){
+      slot.txt="Reintentando la búsqueda…"; renderChat();
+      res=await Promise.allSettled([SB.functions.invoke("chat",{body:{buscar:base, limite:30, apify:miApify()}})]);
+    }
     let errMsg="", sinClave=false; const vistosB=new Set(), todos=[];
     for(const x of res){
       if(x.status!=="fulfilled"){ continue; }

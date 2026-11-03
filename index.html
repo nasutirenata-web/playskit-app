@@ -2107,6 +2107,19 @@ const segTxtG=s=>String(s).toLowerCase().replace(/\s/g,"").replace(/millones|mil
 let BQ=[];
 // token de Apify propio de cada setter: queda solo en este navegador (no se comparte con el equipo)
 const miApify=()=>{ try{ return (localStorage.getItem("ps-apify")||"").trim(); }catch{ return ""; } };
+// además del navegador, el token se guarda en la cuenta de la setter (Supabase): al entrar desde cualquier lado queda conectada sola
+function guardarApify(tk){
+  try{ tk?localStorage.setItem("ps-apify",tk):localStorage.removeItem("ps-apify"); }catch{}
+  if(SB) SB.auth.updateUser({data:{apify:tk||""}}).catch(()=>{});
+}
+async function traerApify(){
+  if(!SB) return;
+  try{
+    const {data}=await SB.auth.getUser(); const guardado=(data?.user?.user_metadata?.apify||"").trim();
+    if(guardado){ try{ localStorage.setItem("ps-apify",guardado); }catch{} const t=$("#bq-tk"); if(t) t.value=guardado; const m=$("#bq-tkm"); if(m) m.textContent="✅ Usando tu cuenta de Apify"; }
+    else if(miApify()) guardarApify(miApify());   // ya lo tenía en este navegador: lo sube a su cuenta
+  }catch{}
+}
 // deja solo los DJs que no están en tu lista ni en la de otro setter (dj_duenio mira toda la base)
 async function sinRepetidos(lista){
   const norm=s=>String(s).toLowerCase().replace(/[._-]/g,"");
@@ -2141,7 +2154,7 @@ async function buscarDJs(q,n){
   $("#bq-go").disabled=false;
 }
 { const t=$("#bq-tk"), m=$("#bq-tkm"); t.value=miApify(); m.textContent=t.value?"✅ Usando tu cuenta de Apify":"";
-  t.addEventListener("change", ()=>{ const v=t.value.trim(); try{ v?localStorage.setItem("ps-apify",v):localStorage.removeItem("ps-apify"); }catch{} m.textContent=v?"✅ Guardado: usando tu cuenta de Apify":"Sin token: usa el de Renata"; }); }
+  t.addEventListener("change", ()=>{ const v=t.value.trim(); guardarApify(v); m.textContent=v?"✅ Guardado: usando tu cuenta de Apify":"Sin token: usa el de Renata"; }); }
 $("#bq-f").addEventListener("submit", e=>{ e.preventDefault(); const q=$("#bq-q").value.trim(); if(q) buscarDJs(q,$("#bq-n").value); });
 $("#bq-res").addEventListener("click", async e=>{
   const b=e.target.closest("[data-bq]"); if(!b||b.disabled) return; const r=BQ[+b.dataset.bq]; if(!r) return;
@@ -2477,7 +2490,7 @@ $("#c-form").addEventListener("submit", e=>{
     CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", opts:true}); $("#c-text").value=""; renderChat(); return; }
   // "conectá esta api: apify_api_xxxx" / "/apify xxxx": guarda el token de Apify de esta setter (no se manda a la IA ni queda en la charla)
   const tkm=v.match(/apify_api_[A-Za-z0-9]+/i) || v.match(/^\/apify\s+([A-Za-z0-9_-]{10,})/i);
-  if(tkm){ const tk=(tkm[1]||tkm[0]).trim(); try{ localStorage.setItem("ps-apify",tk); }catch{}
+  if(tkm){ const tk=(tkm[1]||tkm[0]).trim(); guardarApify(tk);
     const t=$("#bq-tk"); if(t) t.value=tk; const mm=$("#bq-tkm"); if(mm) mm.textContent="✅ Guardado: usando tu cuenta de Apify";
     $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
   if(/^\/apify\s*$/i.test(v)){ $("#c-text").value=""; CHAT.push({de:"setter", txt:"Pegá tu token de Apify acá en el chat (empieza con apify_api_) y lo conecto."}); renderChat(); return; }
@@ -2925,6 +2938,7 @@ document.addEventListener("keydown", e=>{
     SB = sb;
     const ses = await webLogin(sb);
     YO = (ses.user?.email||"").toLowerCase() || null;
+    traerApify();   // si la setter ya conectó su Apify, queda conectada en cualquier dispositivo
     const {data:yo} = await sb.from("equipo").select("rol").maybeSingle();
     if(!yo){ esperarAprobacion(sb, ses.user?.email||""); return; }
     ADMIN = yo.rol==="admin";

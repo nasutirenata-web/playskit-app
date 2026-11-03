@@ -502,7 +502,7 @@ td select.mini{max-width:110px}
 /* Mensajes estilo chat: ancho, saludo grande y barra de escritura abajo; sin lista de conversaciones (no se guardan) */
 .convs[hidden]{display:none}
 .side-foot{font-size:0}
-.msgwrap{grid-template-columns:minmax(0,1fr)}
+@media (min-width:981px){.msgwrap{grid-template-columns:260px minmax(0,1fr)}}
 #c-new{margin-left:auto}
 .chatwrap{max-width:none}
 .hero-chat{margin:auto;text-align:center;max-width:560px;padding:30px 10px}
@@ -1130,7 +1130,7 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
   <!-- MENSAJES (chat) -->
   <section id="v-mensajes" hidden>
     <div class="msgwrap">
-    <div class="convs" hidden>
+    <div class="convs">
       <div class="convs-top"><b>Conversaciones</b></div>
       <div class="convs-sum" id="cv-sum"></div>
       <div class="chips convs-f" id="cv-f"></div>
@@ -2451,13 +2451,13 @@ $("#c-new").addEventListener("click", ()=>{ PANEL=null; CUR=null; CURLEAD=null; 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado
 function guardarCharla(){
-  return;   // el chat ya no se guarda: el avance de cada DJ se marca con los tildes del CRM
   const nombre=$("#m-nombre").value.trim(), lugar=$("#m-lugar").value.trim();
-  const msgs=CHAT.filter(m=>m.txt).map(m=>({de:m.de, txt:m.txt, ...(m.k?{k:m.k}:{})}));
+  const msgs=CHAT.filter(m=>m.txt).map(m=>({de:m.de, txt:m.txt, ...(m.k?{k:m.k}:{}), ...(m.busq?{busq:m.busq.map(r=>({user:r.user, seguidores:r.seguidores??null})), hecho:!!m.hecho}:{})}));
+  const titulo=(CHAT.find(m=>m.de==="dj"&&m.txt)?.txt||"").slice(0,45);
   if(!msgs.length && !nombre) return;
   if(!CUR) CUR="c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const prev=CHARLAS[CUR]||{};
-  store.putCharla({id:CUR, nombre, lugar, tono:MT, msgs, por:prev.por||YO||null, dueno:prev.dueno||YO||null, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
+  store.putCharla({id:CUR, nombre, titulo:prev.titulo||titulo, lugar, tono:MT, msgs, por:prev.por||YO||null, dueno:prev.dueno||YO||null, leadId:CURLEAD||prev.leadId||null, resultado:prev.resultado||null, fecha:prev.fecha||hoy(), upd:Date.now()});
 }
 function abrirCharla(id){
   const C=CHARLAS[id]; if(!C) return;
@@ -2475,12 +2475,12 @@ function renderLista(){
   el.innerHTML = vis.length ? vis.map(C=>{
     const ult=[...(C.msgs||[])].reverse().find(m=>m.de==="dj");
     return `<div class="cv ${C.id===CUR?"on":""} ${C.resultado||""}" data-cv="${C.id}">
-      <div class="cv-main"><b>${esc(C.nombre||"Sin nombre")}</b><span class="sub">${(C.msgs||[]).length} mensajes · ${corta(C.fecha)}</span>
+      <div class="cv-main"><b>${esc(C.nombre||C.titulo||"Chat sin título")}</b><span class="sub">${(C.msgs||[]).length} mensajes · ${corta(C.fecha)}</span>
         ${ult?`<span class="cv-ult">“${esc(ult.txt.slice(0,70))}”</span>`:""}</div>
       <div class="cv-res">${CVDEL===C.id
         ? `<span class="sub">¿Borrar?</span><button type="button" class="btn sm danger" data-cvok>Sí</button><button type="button" class="btn sm ghost" data-cvno>No</button>`
         : `<button type="button" class="r si" data-res="si" aria-pressed="${C.resultado==="si"}" title="Vendida" aria-label="Vendida">✓</button><button type="button" class="r no" data-res="no" aria-pressed="${C.resultado==="no"}" title="No se vendió" aria-label="No se vendió">✗</button><button type="button" class="r del" data-cvdel title="Borrar conversación" aria-label="Borrar conversación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}</div></div>`;
-  }).join("") : `<div class="empty" style="padding:10px 4px">${all.length?"Nada con ese filtro.":"Todavía no hay charlas. Tocá una opción del chat y se guarda sola."}</div>`;
+  }).join("") : `<div class="empty" style="padding:10px 4px">${all.length?"Nada con ese filtro.":"Todavía no hay chats. Escribí algo y se guarda solo."}</div>`;
 }
 $("#cv-f").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b){ CVF=b.dataset.v; renderLista(); } });
 $("#cv-list").addEventListener("click", e=>{

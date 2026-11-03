@@ -2104,6 +2104,16 @@ function bioDeLink(link){
 }
 const segTxtG=s=>String(s).toLowerCase().replace(/\s/g,"").replace(/millones|mill/,"m").replace(/mil/,"k").replace(",",".");
 let BQ=[];
+// deja solo los DJs que no están en tu lista ni en la de otro setter (dj_duenio mira toda la base)
+async function sinRepetidos(lista){
+  const norm=s=>String(s).toLowerCase().replace(/[._-]/g,"");
+  const mios=new Set(Object.values(LEADS).map(x=>norm(x.user)));
+  const vistos=new Set();
+  const nuevos=lista.filter(r=>{ const k=norm(r.user); if(mios.has(k)||vistos.has(k)) return false; vistos.add(k); return true; });
+  if(!SB) return nuevos;
+  const duenos=await Promise.all(nuevos.map(r=>{ const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""); return SB.rpc("dj_duenio",{p_id:idDe(u), p_user:u}).then(x=>x.data, ()=>null); }));
+  return nuevos.filter((r,i)=>!duenos[i]);
+}
 async function buscarDJs(q,n){
   const msg=$("#bq-msg"), box=$("#bq-res"); box.innerHTML=""; BQ=[];
   if(!SB){ msg.textContent="La búsqueda funciona en la versión web."; return; }
@@ -2113,14 +2123,15 @@ async function buscarDJs(q,n){
     if(error){ let m="No pude buscar ahora."; try{ m=(await error.context.json()).error||m; }catch{} msg.textContent=m; }
     else if(data&&data.sinClave){ msg.textContent="Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase."; }
     else{
-      BQ=(data&&data.resultados)||[];
-      msg.textContent = BQ.length ? BQ.length+" perfiles encontrados · gastó unos US$"+(BQ.length*0.0027).toFixed(2)+" del plan gratis" : "No encontré perfiles con esas palabras.";
+      const todos=(data&&data.resultados)||[];
+      BQ=await sinRepetidos(todos);   // saca los que ya están en tu lista o en la de otro setter
+      const rep=todos.length-BQ.length;
+      msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" ya estaban y no los muestro":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
       box.innerHTML=BQ.map((r,i)=>{
         const L={seguidores:r.seguidores==null?"":String(r.seguidores), posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas)};
-        const ya=Object.values(LEADS).some(x=>x.user.replace(/[._-]/g,"")===r.user.toLowerCase().replace(/[._-]/g,""));
         return '<div class="bq-row"><a class="ig-link" href="'+ig(r.user.toLowerCase())+'" target="_blank" rel="noopener"><b>@'+esc(r.user)+'</b></a> '+prioTag(L)
           +'<span class="sub">'+(L.seguidores?esc(L.seguidores)+" seg":"")+(L.posts?" · "+esc(L.posts)+" pub":"")+'</span>'
-          +'<button type="button" class="btn sm" data-bq="'+i+'" '+(ya?"disabled":"")+'>'+(ya?"Ya está":"Agregar")+'</button></div>';
+          +'<button type="button" class="btn sm" data-bq="'+i+'">Agregar</button></div>';
       }).join("");
     }
   }catch{ msg.textContent="No pude buscar ahora."; }
@@ -2129,14 +2140,34 @@ async function buscarDJs(q,n){
 $("#bq-f").addEventListener("submit", e=>{ e.preventDefault(); const q=$("#bq-q").value.trim(); if(q) buscarDJs(q,$("#bq-n").value); });
 $("#bq-res").addEventListener("click", async e=>{
   const b=e.target.closest("[data-bq]"); if(!b||b.disabled) return; const r=BQ[+b.dataset.bq]; if(!r) return;
+  if(await agregarBQ(r)){ b.disabled=true; b.textContent="Agregado ✓"; }
+});
+// búsqueda desde el chat: "/buscar dj techno rosario" -> muestra solo DJs nuevos, con botón Agregar
+async function buscarEnChat(q){
+  CHAT.push({de:"dj", txt:"/buscar "+q});
+  const slot={de:"setter", txt:"Buscando… puede tardar hasta un minuto"}; CHAT.push(slot); renderChat();
+  PENSANDO=true; $("#c-send").disabled=true;
+  try{
+    if(!SB) throw new Error("La búsqueda funciona en la versión web.");
+    const {data, error}=await SB.functions.invoke("chat",{body:{buscar:q, limite:30}});
+    if(error){ let m="No pude buscar ahora."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
+    if(data&&data.sinClave) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
+    const todos=(data&&data.resultados)||[];
+    const nuevos=await sinRepetidos(todos);
+    slot.txt = nuevos.length ? nuevos.length+" DJs nuevos"+(todos.length>nuevos.length?" · "+(todos.length-nuevos.length)+" ya estaban y no los muestro":"") : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    if(nuevos.length) slot.busq=nuevos;
+  }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
+  PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
+}
+async function agregarBQ(r){
   const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
-  if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return; }
-  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return; } }
+  if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
+  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
   const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
-  L.prio=prioDe(L).k; await store.put(L); b.disabled=true; b.textContent="Agregado ✓"; toast("@"+u+" agregado · "+prioDe(L).n);
-});
+  L.prio=prioDe(L).k; await store.put(L); toast("@"+u+" agregado · "+prioDe(L).n); return true;
+}
 function actualizarCompletar(){
   const w=$("#l-comp"); if(!w) return; const api=window.PS_completar;
   if(typeof SB==="undefined" || !SB || !api){ w.hidden=true; return; }
@@ -2282,6 +2313,8 @@ function renderChat(){
     ? `<div class="b bot"><span class="who-l">Opciones</span><div class="t opts-t">${opcionesHTML()}</div></div>`
     : m.de==="dj"
     ? `<div class="b me"><span class="who-l">El DJ dijo</span><div class="t">${esc(m.txt)}</div></div>`
+    : m.busq
+    ? `<div class="b bot"><span class="who-l">Búsqueda</span><div class="t">${esc(m.txt)}${m.busq.map((r,j)=>`<div class="bq-row"><a class="ig-link" href="${ig(r.user.toLowerCase())}" target="_blank" rel="noopener"><b>@${esc(r.user)}</b></a> <span class="sub">${r.seguidores!=null?esc(String(r.seguidores))+" seg":""}</span><button type="button" class="btn sm" data-bqc="${i}:${j}">Agregar</button></div>`).join("")}</div></div>`
     : `<div class="b bot"><span class="who-l">${esc(m.k?(MK[m.k]?.t||m.k):"Respuesta sugerida")}</span><div class="t">${m.txt?esc(m.txt):`<span class="sub">Pensando…</span>`}</div>
         ${m.txt?`<div class="b-acts"><button class="btn sm" data-cc="${i}">Copiar</button>${m.k&&MK[m.k]?.nota?`<span class="note">${esc(MK[m.k].nota)}</span>`:""}</div>`:""}</div>`).join("");
   log.scrollTop = log.scrollHeight;
@@ -2364,6 +2397,9 @@ $("#c-opts").addEventListener("click", e=>{ const b=e.target.closest("[data-op]"
 $("#c-log").addEventListener("click", e=>{
   const op=e.target.closest("[data-op]"); if(op){ agregarPlantilla(op.dataset.op); return; }
   const d=e.target.closest("[data-dj]"); if(d){ const L=LEADS[d.dataset.dj]; if(L) elegirDJ(L); return; }
+  const bq=e.target.closest("[data-bqc]");
+  if(bq){ if(bq.disabled) return; const [i,j]=bq.dataset.bqc.split(":"); const r=CHAT[+i]?.busq?.[+j];
+    if(r) agregarBQ(r).then(ok=>{ if(ok){ bq.disabled=true; bq.textContent="Agregado ✓"; } }); return; }
   const b=e.target.closest("[data-cc]"); if(b) copiar(CHAT[+b.dataset.cc].txt, b);
 });
 $("#estilo-txt").addEventListener("change", e=>store.cfg({estilo:e.target.value.trim()}));
@@ -2427,6 +2463,8 @@ $("#c-form").addEventListener("submit", e=>{
   // "quiero responderle…", "opciones", "plantillas": muestra las opciones de siempre dentro del chat
   if(/respond(er|erle|erles)\b|opcion|plantilla|r[aá]pid/i.test(v)){
     CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", opts:true}); $("#c-text").value=""; renderChat(); return; }
+  const bus=v.match(/^\/buscar\s+(.+)/i);
+  if(bus){ $("#c-text").value=""; buscarEnChat(bus[1].trim()); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }
   $("#c-text").value=""; responderIA(v);
 });

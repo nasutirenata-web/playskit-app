@@ -1124,7 +1124,7 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
     </div>
     <div class="funnel" id="l-funnel"></div>
     <div id="crm-cols" hidden style="margin-top:12px"></div>
-    <div class="tablewrap" id="crm-tabla" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Pub.</th><th>Bio</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
+    <div class="tablewrap" id="crm-tabla" style="margin-top:12px"><table><thead><tr><th>@</th><th>País</th><th>Seguid.</th><th>Pub.</th><th>Bio</th><th>Tipo</th><th class="c">Enviado</th><th class="c">Respondió</th><th class="c">Ebook</th><th class="c">Planes</th></tr></thead><tbody id="l-body"></tbody></table></div>
   </section>
 
   <!-- MENSAJES (chat) -->
@@ -1267,6 +1267,12 @@ const PAISES = [
 ];
 const PAIS = Object.fromEntries(PAISES.map(p=>[p.c,p]));
 const BIOS = ["Linktree","Nada","Drive","Plantilla","Otra"];
+// qué es cada uno: solo DJ, DJ productor o solo productor (se deduce de la bio y el nombre)
+const TIPOS = ["DJ","DJ productor","Productor"];
+function tipoDe(txt){
+  const t=String(txt||"").toLowerCase(), dj=/\bdjs?\b|deejay|\bdj[a-z]/.test(t), pr=/producer|productor|producci[oó]n musical|beatmaker|\bprod\.|music production|\bproducing\b/.test(t);
+  return dj&&pr ? "DJ productor" : dj ? "DJ" : pr ? "Productor" : "";
+}
 const ESTADOS = [
   ["nuevo","Por calentar"],["calentado","Calentado"],["enviado","Enviado"],["respondio","Respondió"],
   ["planes","Planes enviados"],["quiere","Quiere pagar"],["cerrado","Cerrado ✓"],["despues","Más adelante"],["no","No / sin respuesta"]
@@ -1872,8 +1878,8 @@ async function toggleFlag(L,k){
 }
 // nota escrita directo debajo de cada DJ
 document.addEventListener("change", e=>{
-  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.pub||d.bio; if(!id) return; const L=LEADS[id]; if(!L) return;
-  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : d.pub ? "posts" : "bio";
+  const d=e.target.dataset||{}; const id=d.nota||d.ult||d.resp||d.seg||d.pub||d.bio||d.tipo; if(!id) return; const L=LEADS[id]; if(!L) return;
+  const campo = d.nota ? "notas" : d.ult ? "ultMsg" : d.resp ? "ultResp" : d.seg ? "seguidores" : d.pub ? "posts" : d.tipo ? "tipo" : "bio";
   const n={...L, [campo]:e.target.value.trim(), upd:hoy()};
   if(campo==="ultResp" && n.ultResp){ n.chk=null; if(RESP_OK.includes(n.estado)) n.ya=false; }   // llegó un mensaje: vuelve a pendiente
   if(campo==="seguidores"||campo==="posts"||campo==="bio") n.prio=prioDe(n).k;   // la prioridad se recalcula sola
@@ -1951,6 +1957,8 @@ function initCargar(){
         n.bio = !link ? "Nada" : /linktr|beacons|lnk.bio|bio.site|taplink|campsite|solo.to|linkin.bio/.test(link) ? "Linktree" : /drive.google|dropbox|docs.google/.test(link) ? "Drive" : "Plantilla";
       }
       if(data.nombre && !cur.nombre) n.nombre=String(data.nombre).split(" ")[0];
+      if(data.bio && !cur.bioTxt) n.bioTxt=String(data.bio).slice(0,200);
+      if(!cur.tipo){ const tp=tipoDe((data.bio||"")+" "+(data.nombre||"")+" "+cur.user); if(tp) n.tipo=tp; }
       if(faltaDato(n)) n.intento=hoy();   // Apify no tenía alguno de los datos: no se insiste cada vez
       n.prio=prioDe(n).k; await store.put(n);
       if(!quiet) toast("@"+L.user+": datos encontrados · prioridad "+prioDe(n).n, 3500);
@@ -2171,6 +2179,41 @@ $("#bq-res").addEventListener("click", async e=>{
 });
 // búsqueda desde el chat: "/buscar dj techno rosario" -> muestra solo DJs nuevos, con botón Agregar
 // entiende un pedido en lenguaje normal ("productores con poca música que necesiten mandar demos, sin web") y lo pasa a búsquedas de Instagram + filtro de seguidores/publicaciones
+// "calificamelos": el chat dice qué es cada DJ cargado (DJ, DJ productor o Productor) mirando su bio
+async function calificarLeads(){
+  CHAT.push({de:"dj", txt:"Calificamelos"});
+  const slot={de:"setter", txt:"Mirando a cada uno…"}; CHAT.push(slot); renderChat();
+  PENSANDO=true; $("#c-send").disabled=true;
+  try{
+    if(!SB) throw new Error("Esto funciona en la versión web.");
+    const yo=(YO||"").toLowerCase();
+    const todos=Object.values(LEADS).filter(L=>ADMIN || !L.dueno || String(L.dueno).toLowerCase()===yo);
+    const pend=todos.filter(L=>!L.tipo).slice(0,60);
+    if(!pend.length){ slot.txt="✅ Todos tus DJs ya tienen tipo. Podés cambiarlo en la columna Tipo."; throw null; }
+    // 1) la bio de cada uno (si no está guardada, se trae de Instagram)
+    let sig=0, sinClave=false;
+    await Promise.all(Array.from({length:3},async()=>{ while(sig<pend.length){ const L=pend[sig++];
+      if(!L.bioTxt && !sinClave){ try{ const {data}=await SB.functions.invoke("chat",{body:{perfil:L.user, apify:miApify()}}); if(data&&data.sinClave) sinClave=true; else if(data&&data.bio!=null){ L.bioTxt=String(data.bio).slice(0,200); if(data.nombre&&!L.nombre) L.nombre=String(data.nombre).split(" ")[0]; } }catch{} }
+      slot.txt="Mirando a cada uno… "+Math.min(sig,pend.length)+" de "+pend.length; renderChat(); } }));
+    // 2) primero por palabras de la bio; los que no quedan claros los define la IA
+    const res={}; const dudosos=[];
+    for(const L of pend){ const t=tipoDe((L.bioTxt||"")+" "+(L.nombre||"")+" "+L.user); if(t) res[L.id]=t; else dudosos.push(L); }
+    if(dudosos.length){
+      try{
+        const lista=dudosos.map(L=>"@"+L.user+": "+((L.bioTxt||"").replace(/\s+/g," ")||"(sin bio)")+(L.nombre?" | "+L.nombre:"")).join("\n");
+        const {data}=await SB.functions.invoke("chat",{body:{prompt:"Clasificá a cada uno de estos perfiles de Instagram de música electrónica como exactamente uno de: DJ, DJ productor, Productor. Si no hay pistas, poné DJ. Respondé SOLO un JSON {\"usuario\":\"tipo\"} con el usuario sin @.\n"+lista}});
+        const m=String(data&&data.text||"").match(/\{[\s\S]*\}/); const o=m?JSON.parse(m[0]):{};
+        for(const L of dudosos){ const v=o[L.user]; if(TIPOS.includes(v)) res[L.id]=v; }
+      }catch{}
+    }
+    // 3) se guardan
+    let hechos=0; const cuenta={DJ:0,"DJ productor":0,Productor:0};
+    for(const L of pend){ if(res[L.id]){ await store.put({...LEADS[L.id], ...L, tipo:res[L.id], upd:hoy()}); cuenta[res[L.id]]++; hechos++; } else if(L.bioTxt){ await store.put({...LEADS[L.id], bioTxt:L.bioTxt}); } }
+    const faltan=pend.length-hechos, resto=todos.filter(L=>!L.tipo).length-pend.length;
+    slot.txt="✅ Califiqué "+hechos+": "+cuenta.DJ+" DJ · "+cuenta["DJ productor"]+" DJ productor · "+cuenta.Productor+" Productor. Mirá la columna Tipo."+(faltan>0?" "+faltan+" no pude definirlos: ponelos a mano."+(sinClave?" (Falta conectar Apify para leer sus bios.)":""):"")+(resto>0?" Quedan "+resto+" más: pedime calificamelos otra vez.":"");
+  }catch(err){ if(err) slot.txt=err.message||"No pude calificar ahora."; }
+  PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
+}
 async function entenderBusqueda(v){
   try{
     const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"Convertí este pedido en una búsqueda de perfiles de Instagram. Pedido: «"+v.slice(0,500)+"»\n"
@@ -2244,7 +2287,7 @@ async function agregarBQ(r, para, rapido){   // rapido: ya se chequearon repetid
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
   if(par){ if(!rapido) toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
   if(SB && !rapido){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
-  const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
+  const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", tipo:tipoDe((r.bio||"")+" "+(r.nombre||"")+" "+(r.user||"")), bioTxt:String(r.bio||"").slice(0,200), nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(duenio?{por:{cargado:YO||duenio}, dueno:duenio}:{})};
   L.prio=prioDe(L).k; await store.put(L); if(!rapido) toast("@"+u+" agregado · "+prioDe(L).n); return true;
 }
@@ -2271,7 +2314,7 @@ function renderLeads(){
   $("#l-funnel").innerHTML = `<button data-f="" aria-pressed="${FILT===""}">Todos <span>${all.length}</span></button>` + ESTADOS.map(([k,l])=>`<button data-f="${k}" aria-pressed="${FILT===k}">${l} <span>${cnt[k]||0}</span></button>`).join("");
   const rows=all.filter(L=>(!FILT||L.estado===FILT) && (!q || [L.user,L.nombre,L.notas,L.lugar,L.fuente].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(b.upd||"").localeCompare(a.upd||""));
-  const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><input type="text" class="mini" data-pub="${L.id}" value="${esc(L.posts||"")}" placeholder="—" aria-label="Publicaciones de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
+  const filaHTML=L=>`<tr class="click${RESP_OK.includes(L.estado)&&!L.ya&&L.estado!=="quiere"&&L.estado!=="cerrado"?" pend-resp":""}" data-id="${L.id}"><td><a class="ig-link" href="${ig(L.user)}" target="_blank" rel="noopener" title="Abrir su Instagram"><b>@${esc(L.user)}</b></a>${L.top?" ⭐":""} ${prioTag(L)}<input type="text" class="nota-in" data-nota="${L.id}" value="${esc(L.notas||"")}" placeholder="+ nota" aria-label="Nota de @${esc(L.user)}"></td><td class="mono">${esc(L.pais)}</td><td><input type="text" class="mini" data-seg="${L.id}" value="${esc(L.seguidores||"")}" placeholder="—" aria-label="Seguidores de @${esc(L.user)}"></td><td><input type="text" class="mini" data-pub="${L.id}" value="${esc(L.posts||"")}" placeholder="—" aria-label="Publicaciones de @${esc(L.user)}"></td><td><select class="mini" data-bio="${L.id}" aria-label="Bio de @${esc(L.user)}"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></td><td><select class="mini" data-tipo="${L.id}" aria-label="Tipo de @${esc(L.user)}"><option value="">—</option>${TIPOS.map(t=>`<option ${t===L.tipo?"selected":""}>${t}</option>`).join("")}</select></td><td class="c">${flagBtn(L,FLAGS[0])}<input type="text" class="nota-in tx" data-ult="${L.id}" value="${esc(L.ultMsg||"")}" placeholder="+ último mensaje enviado" aria-label="Último mensaje enviado a @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[1])}<input type="text" class="nota-in tx resp" data-resp="${L.id}" value="${esc(L.ultResp||"")}" placeholder="+ qué respondió" aria-label="Qué respondió @${esc(L.user)}"></td><td class="c">${flagBtn(L,FLAGS[2])}</td><td class="c">${flagBtn(L,FLAGS[3])}</td></tr>`;
   const yo=(YO||"").toLowerCase();
   // los DJs sin dueño anotado son de Renata (cargados antes de que existieran las cuentas por setter)
   const duenoDe=L=>(L.dueno||(L.por&&L.por.cargado)||yo).toLowerCase();
@@ -2287,10 +2330,10 @@ function renderLeads(){
       const nombre = m===yo ? "Renata · mis DJs" : (m ? nomMail(m) : "Sin cuenta");
       if(!mias.length && (q||FILT||pais)) return "";   // con un filtro activo no se muestran los grupos vacíos
       const abierto = !!q || grupoAbierto(m, yo);   // si está buscando, se abren todos para que vea lo que encontró
-      const cab = `<tr class="grupo" data-g="${esc(m)}" role="button" tabindex="0" aria-expanded="${abierto}"><td colspan="9"><span class="g-flecha" aria-hidden="true">${abierto?"▾":"▸"}</span><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}${abierto?"":" · tocá para abrir"}</span></td></tr>`;
+      const cab = `<tr class="grupo" data-g="${esc(m)}" role="button" tabindex="0" aria-expanded="${abierto}"><td colspan="10"><span class="g-flecha" aria-hidden="true">${abierto?"▾":"▸"}</span><b>${esc(nombre)}</b> <span class="sub">${mias.length} DJs${m===yo?"":" · solo lectura"}${abierto?"":" · tocá para abrir"}</span></td></tr>`;
       return cab + (abierto ? mias.map(L=>{ const h=filaHTML(L); return m===yo?h:h.replace('<tr class="','<tr class="ro ').replace('class="ro click','class="ro click'); }).join("") : ""); }).join("");
   } else if(rows.length){ htmlLista=rows.map(filaHTML).join(""); }
-  $("#l-body").innerHTML = htmlLista || `<tr><td colspan="9" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
+  $("#l-body").innerHTML = htmlLista || `<tr><td colspan="10" class="sub" style="padding:18px">Todavía no hay DJs. Buscá uno con la lupa y pegá su perfil.</td></tr>`;
   // las filas de Lucero e Ivan se ven pero no se tocan
   document.querySelectorAll("#l-body tr.ro").forEach(r=>r.querySelectorAll("input,select,button").forEach(i=>i.disabled=true));
 }
@@ -2600,6 +2643,7 @@ $("#c-form").addEventListener("submit", e=>{
     }catch(err){ slot.txt=err.message||"No pude consultar Apify ahora."; } renderChat(); guardarCharla(); })();
     return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
+  if(/\b(calific|clasific|categoriz)\w*/i.test(v) || /\bqu[eé]\s+(es|son)\s+(cada|todos)/i.test(v) || /\b(son|es)\s+djs?\s+o\s+productor/i.test(v)){ $("#c-text").value=""; calificarLeads(); return; }
   let bus=v.match(/^\/buscar\s+(.+)/i), natural=false;
   if(!bus && /\b(djs?|leads?|productor\w*|producers?|artistas?|beatmakers?|perfiles|m[uú]sicos?|sellos?)\b/i.test(v) && /\b(busc|busqu|encontr|trae|dame|consegu|necesit|quier|arm[aá]|carg|agreg|list[aá]|gener|hac[eé]|pon[eé]|sac[aá]|hay|ten[eé]s|mostr|sum[aá]|m[aá]s)\w*/i.test(v) && !/\b(mensaje|respond|contest|escrib|dijo|seguimiento|vista previa|precio|planes)\b/i.test(v)){ bus=[v, v]; natural=true; }
   if(bus){
@@ -2731,6 +2775,7 @@ function openDrawer(id){
       <div class="field"><label for="d-vis">Vistas promedio</label><input type="text" id="d-vis" data-f="vistas" value="${esc(L.vistas||"")}" placeholder="auto"></div>
       <div class="field"><label for="d-pais">País</label><select id="d-pais" data-f="pais">${PAISES.map(p=>`<option value="${p.c}" ${p.c===L.pais?"selected":""}>${p.n}</option>`).join("")}</select></div>
       <div class="field"><label for="d-fuente">Fuente</label><input type="text" id="d-fuente" data-f="fuente" value="${esc(L.fuente||"Presskit actual")}" list="fuentes"></div>
+      <div class="field"><label for="d-tipo">Tipo</label><select id="d-tipo" data-f="tipo"><option value="">—</option>${TIPOS.map(t=>`<option ${t===L.tipo?"selected":""}>${t}</option>`).join("")}</select></div>
       <div class="field"><label for="d-bio">Bio</label><select id="d-bio" data-f="bio"><option value="">—</option>${BIOS.map(b=>`<option ${b===L.bio?"selected":""}>${b}</option>`).join("")}</select></div>
     </div>
     <div class="field"><label for="d-notas">Notas</label><textarea id="d-notas" data-f="notas">${esc(L.notas||"")}</textarea></div>

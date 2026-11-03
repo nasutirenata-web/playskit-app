@@ -2580,7 +2580,7 @@ $("#c-form").addEventListener("submit", e=>{
     return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
   let bus=v.match(/^\/buscar\s+(.+)/i), natural=false;
-  if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu|necesit|quier|arm[aá]me)\w*/i.test(v) && /\b(djs?|productor\w*|producers?|artistas?|beatmakers?)\b/i.test(v)){ bus=[v, v]; natural=true; }
+  if(!bus && /\b(busc|busqu|encontr|trae|dame|consegu|necesit|quier|arm[aá]|carg|agreg|list[aá]|gener|hac[eé]|pon[eé]|sac[aá])\w*/i.test(v) && /\b(djs?|leads?|productor\w*|producers?|artistas?|beatmakers?|perfiles)\b/i.test(v)){ bus=[v, v]; natural=true; }
   if(bus){
     // la admin puede decir "para Ivan": los DJs se cargan a la lista de esa setter
     let para=null;

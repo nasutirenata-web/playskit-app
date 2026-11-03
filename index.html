@@ -2354,7 +2354,8 @@ function armarPrompt(mensajes){
   return `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
 Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes cortos (máximo 3 líneas); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
-${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
+${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Esta app SÍ se conecta con Apify (busca DJs nuevos sin repetir y los carga a la lista): si te piden conectar una API o integración, no digas que no se puede; decí que peguen su token (apify_api_…) en el chat.
+Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
 Mensajes modelo (adaptalos, no los copies igual):
 ${lib}
 
@@ -2489,11 +2490,13 @@ $("#c-form").addEventListener("submit", e=>{
   if(/respond(er|erle|erles)\b|opcion|plantilla|r[aá]pid/i.test(v)){
     CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", opts:true}); $("#c-text").value=""; renderChat(); return; }
   // "conectá esta api: apify_api_xxxx" / "/apify xxxx": guarda el token de Apify de esta setter (no se manda a la IA ni queda en la charla)
-  const tkm=v.match(/apify_api_[A-Za-z0-9]+/i) || v.match(/^\/apify\s+([A-Za-z0-9_-]{10,})/i);
+  const hablaApi=/apify|\bapi\b|\btoken\b|integraci/i.test(v);
+  const tkm=v.match(/apify_api_[A-Za-z0-9]+/i) || v.match(/^\/apify\s+([A-Za-z0-9_-]{10,})/i) || (hablaApi ? v.match(/(?:^|[\s:=])([A-Za-z0-9_-]{24,})(?=$|[\s.,;])/) : null);
   if(tkm){ const tk=(tkm[1]||tkm[0]).trim(); guardarApify(tk);
     const t=$("#bq-tk"); if(t) t.value=tk; const mm=$("#bq-tkm"); if(mm) mm.textContent="✅ Guardado: usando tu cuenta de Apify";
     $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
-  if(/^\/apify\s*$/i.test(v)){ $("#c-text").value=""; CHAT.push({de:"setter", txt:"Pegá tu token de Apify acá en el chat (empieza con apify_api_) y lo conecto."}); renderChat(); return; }
+  // pide conectar Apify pero sin token: se contesta acá, nunca la IA (que decía que no trabaja con integraciones)
+  if(/^\/apify\s*$/i.test(v) || (hablaApi && /conect|integr|vincul|configur|agreg/i.test(v))){ $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", txt:"Sí, esta app se conecta con Apify. Pegá tu token acá en el chat (empieza con apify_api_) y queda conectado a tu cuenta. Lo sacás en Apify → Settings → API & Integrations."}); renderChat(); return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
   let bus=v.match(/^\/buscar\s+(.+)/i);
   if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu)\w*/i.test(v) && /\bdjs?\b/i.test(v)){

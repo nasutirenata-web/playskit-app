@@ -2239,7 +2239,7 @@ async function calificarLeads(){
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
 // deja solo DJs y productores de música electrónica: la IA mira bio y nombre; si no responde, se usan palabras clave
-const ELECTRO_KW=/(dj|djs|techno|tekno|tech house|house|trance|psytrance|electr[oó]nic[ao]?|electronic|edm|dnb|drum ?(?:&|and|n) ?bass|dubstep|ableton|melodic|afro ?house|hardstyle|rave|ukg|garage|acid|hardcore|synthwave)/i;
+const ELECTRO_KW=/\b(dj|djs|techno|tekno|tech house|house|trance|psytrance|electr[oó]nic[ao]?|electronic|edm|dnb|drum ?(?:&|and|n) ?bass|dubstep|ableton|melodic|afro ?house|hardstyle|rave|ukg|garage|acid|hardcore|synthwave)\b/i;
 async function soloElectronica(lista){
   if(!lista.length || !SB) return lista;
   const ok=new Set(), texto=r=>[r.user,r.nombre,r.bio].filter(Boolean).join(" ");

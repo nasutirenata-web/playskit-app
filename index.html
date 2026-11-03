@@ -2181,7 +2181,7 @@ async function buscarDJs(q,n){
     else if(data&&data.sinClave){ msg.textContent="Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase."; }
     else{
       const todos=(data&&data.resultados)||[];
-      BQ=sinWebPropia(await sinRepetidos(todos));   // saca los que ya están en la base y los que ya tienen web propia
+      BQ=await soloElectronica(sinWebPropia(await sinRepetidos(todos)));   // saca los que ya están en la base y los que ya tienen web propia
       const rep=todos.length-BQ.length;
       msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados o no encajan. Escribile al chat lo que buscás como quieras y lo entiende." : "No encontré perfiles. Escribile al chat lo que buscás como quieras y lo entiende.");
       box.innerHTML=BQ.map((r,i)=>{
@@ -2238,6 +2238,22 @@ async function calificarLeads(){
   }catch(err){ if(err) slot.txt=err.message||"No pude calificar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
+// deja solo DJs y productores de música electrónica: la IA mira bio y nombre; si no responde, se usan palabras clave
+const ELECTRO_KW=/\b(dj|djs|techno|tech house|house|trance|electr[oó]nic[ao]?|edm|dnb|drum ?(?:&|and|n) ?bass|dubstep|ableton|fl studio|melodic|minimal|progressive|deep|afro ?house|hardstyle|rave|synth|beatmaker|beats|producer|productor[a]?|club)\b/i;
+async function soloElectronica(lista){
+  if(!lista.length || !SB) return lista;
+  const ok=new Set(), texto=r=>[r.user,r.nombre,r.bio].filter(Boolean).join(" ");
+  for(let i=0;i<lista.length;i+=40){
+    const trozo=lista.slice(i,i+40); let mapa=null;
+    try{
+      const lineas=trozo.map(r=>r.user+" | "+String(r.nombre||"")+" | "+String(r.bio||"").replace(/\s+/g," ").slice(0,160)).join("\n");
+      const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"De estos perfiles de Instagram (usuario | nombre | bio), decime cuáles son de un DJ o productor de MÚSICA ELECTRÓNICA (techno, house, trance, EDM, drum and bass, etc.). Excluí: bandas de rock, cantantes, reggaeton, cumbia, trap o pop sin producción electrónica, fans, discotecas, marcas, sellos y cualquier cuenta que no sea de música. Si no hay pistas pero el usuario o el nombre dice dj, poné true.\nRespondé SOLO un JSON {\"usuario\":true o false} con el usuario sin @.\n"+lineas}});
+      const m=!error && String(data&&data.text||"").match(/\{[\s\S]*\}/); if(m) mapa=JSON.parse(m[0]);
+    }catch{}
+    for(const r of trozo){ const v=mapa ? mapa[r.user] : undefined; if(v===true || (v===undefined && ELECTRO_KW.test(texto(r)))) ok.add(r.user); }
+  }
+  return lista.filter(r=>ok.has(r.user));
+}
 async function entenderBusqueda(v){
   try{
     const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"Convertí este pedido en una búsqueda de perfiles de Instagram. Pedido: «"+v.slice(0,500)+"»\n"
@@ -2263,7 +2279,7 @@ async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta
       // "busca productores" sin género: búsqueda general, no se reparte por estilos
       const esProd=/productor|producer|beatmaker/i.test(q), conGenero=/techno|house|trance|melodic|afro|minimal|progressive|drum|dnb|bass|deep|latin|reggaeton|trap|hip ?hop|cumbia|dubstep|hardstyle|ambient|lo-?fi|rock|pop\b/i.test(q);
       const poca=/poca|emergent|chic[oa]|reci[eé]n|empiez/i.test(q);
-      const plan=(esProd&&!conGenero) ? {consultas:["productor musical","music producer"], maxSeg:poca?20000:0, maxPub:poca?300:0} : await entenderBusqueda(q);
+      const plan=(esProd&&!conGenero) ? {consultas:["productor música electrónica","electronic music producer"], maxSeg:poca?20000:0, maxPub:poca?300:0} : await entenderBusqueda(q);
       if(plan){ variantes=plan.consultas.slice(0,2); if(plan.maxSeg||plan.maxPub) filtro=r=>(!plan.maxSeg||r.seguidores==null||r.seguidores<=plan.maxSeg)&&(!plan.maxPub||r.publicaciones==null||r.publicaciones<=plan.maxPub); }
       else { const d=q.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i); q=/productor|producer|beat/i.test(q)?"productor musical":"dj "+((d&&d[1])||"electronica").trim(); }
       slot.txt="Buscando… puede tardar hasta un minuto"; renderChat();
@@ -2290,6 +2306,8 @@ async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta
     let nuevos=sinWebPropia(await sinRepetidos(todos));
     const antes=nuevos.length; if(filtro) nuevos=nuevos.filter(filtro);   // ICP: poca música (pocas publicaciones y seguidores)
     const fuera=antes-nuevos.length;
+    slot.txt="Revisando que sean de música electrónica…"; renderChat();
+    const antesE=nuevos.length; nuevos=await soloElectronica(nuevos); const noElec=antesE-nuevos.length;
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
     BUSQ_Q=String(natural&&variantes?variantes[0]:q).slice(0,50); const cargados=[]; let sig=0;
@@ -2300,7 +2318,7 @@ async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta
       const plan2=await entenderBusqueda(q+"\n(Ya probé con: "+variantes.join(", ")+". Dame consultas DISTINTAS: sinónimos, otros géneros, otras ciudades o países parecidos.)");
       if(plan2){ await buscarEnChat(q, para, natural, {slot, variantes:plan2.consultas.slice(0,2), filtro}); return; }
     }
-    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban, tienen web propia"+(fuera?" o tienen mucha música/seguidores":"")+")":"") : (todos.length ? "Los "+todos.length+" que encontré ya estaban cargados, tienen web propia o no encajan. Probé también con búsquedas parecidas." : "No encontré perfiles, ni con búsquedas parecidas. Contame un poco más qué tipo de DJ o productor querés y lo busco.");
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban, tienen web propia"+(fuera?" o tienen mucha música/seguidores":"")+(noElec?(fuera?",":" o")+" no son de música electrónica":"")+")":"") : (todos.length ? "Los "+todos.length+" que encontré ya estaban cargados, tienen web propia o no encajan. Probé también con búsquedas parecidas." : "No encontré perfiles, ni con búsquedas parecidas. Contame un poco más qué tipo de DJ o productor querés y lo busco.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();

@@ -2239,7 +2239,7 @@ async function calificarLeads(){
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
 // deja solo DJs y productores de música electrónica: la IA mira bio y nombre; si no responde, se usan palabras clave
-const ELECTRO_KW=/\b(dj|djs|techno|tech house|house|trance|electr[oó]nic[ao]?|edm|dnb|drum ?(?:&|and|n) ?bass|dubstep|ableton|fl studio|melodic|minimal|progressive|deep|afro ?house|hardstyle|rave|synth|beatmaker|beats|producer|productor[a]?|club)\b/i;
+const ELECTRO_KW=/(dj|djs|techno|tekno|tech house|house|trance|psytrance|electr[oó]nic[ao]?|electronic|edm|dnb|drum ?(?:&|and|n) ?bass|dubstep|ableton|melodic|afro ?house|hardstyle|rave|ukg|garage|acid|hardcore|synthwave)/i;
 async function soloElectronica(lista){
   if(!lista.length || !SB) return lista;
   const ok=new Set(), texto=r=>[r.user,r.nombre,r.bio].filter(Boolean).join(" ");
@@ -2247,7 +2247,7 @@ async function soloElectronica(lista){
     const trozo=lista.slice(i,i+40); let mapa=null;
     try{
       const lineas=trozo.map(r=>r.user+" | "+String(r.nombre||"")+" | "+String(r.bio||"").replace(/\s+/g," ").slice(0,160)).join("\n");
-      const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"De estos perfiles de Instagram (usuario | nombre | bio), decime cuáles son de un DJ o productor de MÚSICA ELECTRÓNICA (techno, house, trance, EDM, drum and bass, etc.). Excluí: bandas de rock, cantantes, reggaeton, cumbia, trap o pop sin producción electrónica, fans, discotecas, marcas, sellos y cualquier cuenta que no sea de música. Si no hay pistas pero el usuario o el nombre dice dj, poné true.\nRespondé SOLO un JSON {\"usuario\":true o false} con el usuario sin @.\n"+lineas}});
+      const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"De estos perfiles de Instagram (usuario | nombre | bio), decime cuáles son de un DJ o productor de MÚSICA ELECTRÓNICA (techno, house, trance, EDM, drum and bass, etc.). Excluí: bandas de rock, cantantes, reggaeton, cumbia, trap o pop sin producción electrónica, fans, discotecas, marcas, sellos y cualquier cuenta que no sea de música. Poné true SOLO si hay pistas claras de electrónica (dice DJ, techno, house, trance, EDM, un género electrónico, set, club o sello electrónico). Un artista o productor sin pistas claras de electrónica es false. Si la bio está vacía pero el usuario o el nombre dice dj, poné true.\nRespondé SOLO un JSON {\"usuario\":true o false} con el usuario sin @.\n"+lineas}});
       const m=!error && String(data&&data.text||"").match(/\{[\s\S]*\}/); if(m) mapa=JSON.parse(m[0]);
     }catch{}
     for(const r of trozo){ const v=mapa ? mapa[r.user] : undefined; if(v===true || (v===undefined && ELECTRO_KW.test(texto(r)))) ok.add(r.user); }

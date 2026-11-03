@@ -2151,7 +2151,7 @@ async function buscarDJs(q,n){
       const todos=(data&&data.resultados)||[];
       BQ=sinWebPropia(await sinRepetidos(todos));   // saca los que ya están en la base y los que ya tienen web propia
       const rep=todos.length-BQ.length;
-      msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+      msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados o no encajan. Escribile al chat lo que buscás como quieras y lo entiende." : "No encontré perfiles. Escribile al chat lo que buscás como quieras y lo entiende.");
       box.innerHTML=BQ.map((r,i)=>{
         const L={seguidores:r.seguidores==null?"":String(r.seguidores), posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas)};
         return '<div class="bq-row"><a class="ig-link" href="'+ig(r.user.toLowerCase())+'" target="_blank" rel="noopener"><b>@'+esc(r.user)+'</b></a> '+prioTag(L)
@@ -2184,15 +2184,15 @@ async function entenderBusqueda(v){
     return cs.length ? {consultas:cs, maxSeg:+o.max_seguidores||0, maxPub:+o.max_publicaciones||0} : null;
   }catch{ return null; }
 }
-async function buscarEnChat(q, para, natural){
-  CHAT.push({de:"dj", txt:natural?q:"/buscar "+q});
-  const slot={de:"setter", txt:"Buscando… puede tardar hasta un minuto"}; CHAT.push(slot); renderChat();
+async function buscarEnChat(q, para, natural, extra){   // extra: segunda vuelta automática con otras búsquedas (misma burbuja)
+  if(!extra) CHAT.push({de:"dj", txt:natural?q:"/buscar "+q});
+  const slot=extra?extra.slot:{de:"setter", txt:"Buscando… puede tardar hasta un minuto"}; if(!extra) CHAT.push(slot); renderChat();
   PENSANDO=true; $("#c-send").disabled=true;
   try{
     if(!SB) throw new Error("La búsqueda funciona en la versión web.");
     // 3 búsquedas parecidas al mismo tiempo (50 cada una): salen más DJs distintos y no se espera una atrás de otra
-    let variantes=null, filtro=null;
-    if(natural){
+    let variantes=extra?extra.variantes:null, filtro=extra?extra.filtro:null;
+    if(natural && !extra){
       // "busca productores" sin género: búsqueda general, no se reparte por estilos
       const esProd=/productor|producer|beatmaker/i.test(q), conGenero=/techno|house|trance|melodic|afro|minimal|progressive|drum|dnb|bass|deep|latin|reggaeton|trap|hip ?hop|cumbia|dubstep|hardstyle|ambient|lo-?fi|rock|pop\b/i.test(q);
       const poca=/poca|emergent|chic[oa]|reci[eé]n|empiez/i.test(q);
@@ -2206,9 +2206,9 @@ async function buscarEnChat(q, para, natural){
     let res=await Promise.allSettled(variantes.map(v=>SB.functions.invoke("chat",{body:{buscar:v, limite:40, apify:miApify()}})));
     // si en paralelo no vino nada (Apify gratis a veces rechaza 2 búsquedas juntas), reintenta con una sola como antes
     const vacio=r=>r.status!=="fulfilled"||r.value.error||!(r.value.data&&r.value.data.resultados&&r.value.data.resultados.length);
-    if(res.every(vacio) && !res.some(r=>r.status==="fulfilled"&&r.value.data&&r.value.data.sinClave)){
+    if(res.every(vacio) && res.some(r=>r.status!=="fulfilled"||r.value.error) && !res.some(r=>r.status==="fulfilled"&&r.value.data&&r.value.data.sinClave)){
       slot.txt="Reintentando la búsqueda…"; renderChat();
-      res=await Promise.allSettled([SB.functions.invoke("chat",{body:{buscar:base, limite:30, apify:miApify()}})]);
+      res=await Promise.allSettled([SB.functions.invoke("chat",{body:{buscar:variantes[0], limite:30, apify:miApify()}})]);
     }
     let errMsg="", sinClave=false; const vistosB=new Set(), todos=[];
     for(const x of res){
@@ -2228,7 +2228,12 @@ async function buscarEnChat(q, para, natural){
     const cargados=[]; let sig=0;
     await Promise.all(Array.from({length:5},async()=>{ while(sig<nuevos.length){ const r=nuevos[sig++]; try{ if(await agregarBQ(r, para, true)) cargados.push(r); }catch{} slot.txt="Cargando DJs a tu lista… "+cargados.length+" de "+nuevos.length; renderChat(); } }));
     const rep=todos.length-cargados.length;
-    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban, tienen web propia"+(fuera?" o tienen mucha música/seguidores":"")+")":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados o no encajan. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    if(!cargados.length && !extra){   // no salió nada nuevo: prueba solo con otras búsquedas parecidas, sin pedirle nada a la setter
+      slot.txt="No salió nada nuevo, pruebo con otras búsquedas parecidas…"; renderChat();
+      const plan2=await entenderBusqueda(q+"\n(Ya probé con: "+variantes.join(", ")+". Dame consultas DISTINTAS: sinónimos, otros géneros, otras ciudades o países parecidos.)");
+      if(plan2){ await buscarEnChat(q, para, natural, {slot, variantes:plan2.consultas.slice(0,2), filtro}); return; }
+    }
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban, tienen web propia"+(fuera?" o tienen mucha música/seguidores":"")+")":"") : (todos.length ? "Los "+todos.length+" que encontré ya estaban cargados, tienen web propia o no encajan. Probé también con búsquedas parecidas." : "No encontré perfiles, ni con búsquedas parecidas. Contame un poco más qué tipo de DJ o productor querés y lo busco.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
@@ -2596,7 +2601,7 @@ $("#c-form").addEventListener("submit", e=>{
     return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
   let bus=v.match(/^\/buscar\s+(.+)/i), natural=false;
-  if(!bus && /\b(busc|busqu|encontr|trae|dame|consegu|necesit|quier|arm[aá]|carg|agreg|list[aá]|gener|hac[eé]|pon[eé]|sac[aá])\w*/i.test(v) && /\b(djs?|leads?|productor\w*|producers?|artistas?|beatmakers?|perfiles)\b/i.test(v)){ bus=[v, v]; natural=true; }
+  if(!bus && /\b(djs?|leads?|productor\w*|producers?|artistas?|beatmakers?|perfiles|m[uú]sicos?|sellos?)\b/i.test(v) && /\b(busc|busqu|encontr|trae|dame|consegu|necesit|quier|arm[aá]|carg|agreg|list[aá]|gener|hac[eé]|pon[eé]|sac[aá]|hay|ten[eé]s|mostr|sum[aá]|m[aá]s)\w*/i.test(v) && !/\b(mensaje|respond|contest|escrib|dijo|seguimiento|vista previa|precio|planes)\b/i.test(v)){ bus=[v, v]; natural=true; }
   if(bus){
     // la admin puede decir "para Ivan": los DJs se cargan a la lista de esa setter
     let para=null;

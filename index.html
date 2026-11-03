@@ -2176,29 +2176,40 @@ async function buscarEnChat(q, para){
   PENSANDO=true; $("#c-send").disabled=true;
   try{
     if(!SB) throw new Error("La búsqueda funciona en la versión web.");
-    const {data, error}=await SB.functions.invoke("chat",{body:{buscar:q, limite:30, apify:miApify()}});
-    if(error){ let m="No pude buscar ahora."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
-    if(data&&data.sinClave) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
-    const todos=(data&&data.resultados)||[];
+    // 3 búsquedas parecidas al mismo tiempo (50 cada una): salen más DJs distintos y no se espera una atrás de otra
+    const base=q.replace(/s+/g," ").trim(), conDj=/djs?/i.test(base);
+    const variantes=[base, conDj?base+" music":"dj "+base, conDj?base+" productor":base+" djs"];
+    const res=await Promise.allSettled(variantes.map(v=>SB.functions.invoke("chat",{body:{buscar:v, limite:50, apify:miApify()}})));
+    let errMsg="", sinClave=false; const vistosB=new Set(), todos=[];
+    for(const x of res){
+      if(x.status!=="fulfilled"){ continue; }
+      const {data, error}=x.value;
+      if(error){ if(!errMsg){ try{ errMsg=(await error.context.json()).error||""; }catch{} errMsg=errMsg||"No pude buscar ahora."; } continue; }
+      if(data&&data.sinClave){ sinClave=true; continue; }
+      for(const r of (data&&data.resultados)||[]){ const k=String(r.user).toLowerCase(); if(!vistosB.has(k)){ vistosB.add(k); todos.push(r); } }
+    }
+    if(sinClave && !todos.length) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
+    if(errMsg && !todos.length) throw new Error(errMsg);
     const nuevos=sinWebPropia(await sinRepetidos(todos));
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
-    const cargados=[]; for(const r of nuevos){ if(await agregarBQ(r, para)) cargados.push(r); }
+    const cargados=[]; let sig=0;
+    await Promise.all(Array.from({length:5},async()=>{ while(sig<nuevos.length){ const r=nuevos[sig++]; try{ if(await agregarBQ(r, para, true)) cargados.push(r); }catch{} slot.txt="Cargando DJs a tu lista… "+cargados.length+" de "+nuevos.length; renderChat(); } }));
     const rep=todos.length-cargados.length;
     slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
-async function agregarBQ(r, para){
+async function agregarBQ(r, para, rapido){   // rapido: ya se chequearon repetidos, no vuelve a preguntar ni avisa uno por uno
   const duenio=(para||YO||"").toLowerCase()||null;   // la admin puede cargar los DJs a la lista de otra setter
   const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
-  if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
-  if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
+  if(par){ if(!rapido) toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
+  if(SB && !rapido){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
   const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
     posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(duenio?{por:{cargado:YO||duenio}, dueno:duenio}:{})};
-  L.prio=prioDe(L).k; await store.put(L); toast("@"+u+" agregado · "+prioDe(L).n); return true;
+  L.prio=prioDe(L).k; await store.put(L); if(!rapido) toast("@"+u+" agregado · "+prioDe(L).n); return true;
 }
 function actualizarCompletar(){
   const w=$("#l-comp"); if(!w) return; const api=window.PS_completar;

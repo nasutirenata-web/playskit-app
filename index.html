@@ -2127,6 +2127,8 @@ async function traerApify(){
     else if(miApify()) guardarApify(miApify());   // ya lo tenía en este navegador: lo sube a su cuenta
   }catch{}
 }
+// lead que sirve: sin web propia en su Instagram (sin link, Linktree o similar); si ya tiene web, no se le vende una
+const sinWebPropia=lista=>lista.filter(r=>bioDeLink(r.link)!=="Plantilla");
 // deja solo los DJs que no están en tu lista ni en la de otro setter (dj_duenio mira toda la base)
 async function sinRepetidos(lista){
   const norm=s=>String(s).toLowerCase().replace(/[._-]/g,"");
@@ -2147,9 +2149,9 @@ async function buscarDJs(q,n){
     else if(data&&data.sinClave){ msg.textContent="Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase."; }
     else{
       const todos=(data&&data.resultados)||[];
-      BQ=await sinRepetidos(todos);   // saca los que ya están en tu lista o en la de otro setter
+      BQ=sinWebPropia(await sinRepetidos(todos));   // saca los que ya están en la base y los que ya tienen web propia
       const rep=todos.length-BQ.length;
-      msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" ya estaban y no los muestro":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+      msg.textContent = BQ.length ? BQ.length+" DJs nuevos"+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"")+" · gastó unos US$"+(todos.length*0.0027).toFixed(2)+" del plan gratis" : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
       box.innerHTML=BQ.map((r,i)=>{
         const L={seguidores:r.seguidores==null?"":String(r.seguidores), posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas)};
         return '<div class="bq-row"><a class="ig-link" href="'+ig(r.user.toLowerCase())+'" target="_blank" rel="noopener"><b>@'+esc(r.user)+'</b></a> '+prioTag(L)
@@ -2178,12 +2180,12 @@ async function buscarEnChat(q, para){
     if(error){ let m="No pude buscar ahora."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
     if(data&&data.sinClave) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
     const todos=(data&&data.resultados)||[];
-    const nuevos=await sinRepetidos(todos);
+    const nuevos=sinWebPropia(await sinRepetidos(todos));
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
     const cargados=[]; for(const r of nuevos){ if(await agregarBQ(r, para)) cargados.push(r); }
     const rep=todos.length-cargados.length;
-    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" ya los tenían y no los repetí":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
@@ -2362,7 +2364,8 @@ function armarPrompt(mensajes){
   return `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
 Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes naturales, sin cortar ni resumir de más (terminá siempre las frases); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
-${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Esta app SÍ se conecta con Apify (busca DJs nuevos sin repetir y los carga a la lista): si te piden conectar una API o integración, no digas que no se puede; decí que peguen su token (apify_api_…) en el chat.
+${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Vos NO podés buscar, filtrar ni cargar DJs: eso lo hace el comando /buscar (que ya descarta repetidos y DJs con web propia). Nunca digas "listo, filtré" ni "cargué" nada; si te piden buscar DJs, decí que escriban /buscar seguido de las palabras (ej: /buscar dj techno rosario).
+Esta app SÍ se conecta con Apify (busca DJs nuevos sin repetir y los carga a la lista): si te piden conectar una API o integración, no digas que no se puede; decí que peguen su token (apify_api_…) en el chat.
 Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
 Mensajes modelo (adaptalos, no los copies igual):
 ${lib}

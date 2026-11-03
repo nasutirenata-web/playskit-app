@@ -2364,7 +2364,8 @@ function armarPrompt(mensajes){
   return `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
 Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes naturales, sin cortar ni resumir de más (terminá siempre las frases); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
-${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}Vos NO podés buscar, filtrar ni cargar DJs: eso lo hace el comando /buscar (que ya descarta repetidos y DJs con web propia). Nunca digas "listo, filtré" ni "cargué" nada; si te piden buscar DJs, decí que escriban /buscar seguido de las palabras (ej: /buscar dj techno rosario).
+${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}No sabés cuántos créditos, saldo ni datos de cuentas hay: nunca inventes números.
+Vos NO podés buscar, filtrar ni cargar DJs: eso lo hace el comando /buscar (que ya descarta repetidos y DJs con web propia). Nunca digas "listo, filtré" ni "cargué" nada; si te piden buscar DJs, decí que escriban /buscar seguido de las palabras (ej: /buscar dj techno rosario).
 Esta app SÍ se conecta con Apify (busca DJs nuevos sin repetir y los carga a la lista): si te piden conectar una API o integración, no digas que no se puede; decí que peguen su token (apify_api_…) en el chat.
 Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
 Mensajes modelo (adaptalos, no los copies igual):
@@ -2508,6 +2509,19 @@ $("#c-form").addEventListener("submit", e=>{
     $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
   // pide conectar Apify pero sin token: se contesta acá, nunca la IA (que decía que no trabaja con integraciones)
   if(/^\/apify\s*$/i.test(v) || (hablaApi && /conect|integr|vincul|configur|agreg/i.test(v))){ $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", txt:"Sí, esta app se conecta con Apify. Pegá tu token acá en el chat (empieza con apify_api_) y queda conectado a tu cuenta. Lo sacás en Apify → Settings → API & Integrations."}); renderChat(); return; }
+  // "cuántos créditos me quedan": se consulta a Apify de verdad, la IA no sabe ese dato
+  if(/cr[eé]ditos?|saldo/i.test(v) && /cu[aá]nt|quedan|queda|disponible|tengo|saldo/i.test(v) && !/^\/buscar/i.test(v)){
+    $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); const slot={de:"setter", txt:"Consultando tu cuenta de Apify…"}; CHAT.push(slot); renderChat();
+    (async()=>{ try{
+      if(!SB) throw new Error("Esto funciona en la versión web.");
+      const {data, error}=await SB.functions.invoke("chat",{body:{creditos:true, apify:miApify()}});
+      if(error){ let m="No pude consultar Apify ahora."; try{ m=(await error.context.json()).error||m; }catch{} throw new Error(m); }
+      if(data?.sinClave) throw new Error("Todavía no conectaste tu Apify. Pegá tu token en el chat (empieza con apify_api_).");
+      if(data?.usado==null||data?.limite==null) throw new Error("Apify no me dio el dato. Mirá en console.apify.com/billing.");
+      const queda=Math.max(0,data.limite-data.usado);
+      slot.txt="Te quedan US$"+queda.toFixed(2)+" de US$"+data.limite.toFixed(2)+" este mes (usaste US$"+data.usado.toFixed(2)+"). Alcanzan para unos "+Math.floor(queda/0.0027)+" perfiles."+(data.renueva?" Se renueva el "+String(data.renueva).slice(0,10)+".":"");
+    }catch(err){ slot.txt=err.message||"No pude consultar Apify ahora."; } renderChat(); guardarCharla(); })();
+    return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
   let bus=v.match(/^\/buscar\s+(.+)/i);
   if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu)\w*/i.test(v) && /\bdjs?\b/i.test(v)){

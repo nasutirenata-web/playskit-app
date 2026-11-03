@@ -418,7 +418,7 @@ select option{background:var(--surface);color:var(--ink)}
 .cv.si{box-shadow:inset 3px 0 0 var(--ok)}
 .cv.no{box-shadow:inset 3px 0 0 var(--bad);opacity:.75}
 .cv-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.cv-main b{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cv-main b{font-weight:600;font-size:14.5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:normal;word-break:break-word}
 .cv-main .sub{font-size:12px}
 .cv-ult{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cv-res{display:flex;gap:4px;flex:none}
@@ -1131,7 +1131,7 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
   <section id="v-mensajes" hidden>
     <div class="msgwrap">
     <div class="convs">
-      <div class="convs-top"><b>Conversaciones</b></div>
+      <div class="convs-top"><b>Conversaciones</b><button class="btn sm pri" type="button" id="c-new2">+ Nuevo chat</button></div>
       <div class="convs-sum" id="cv-sum"></div>
       <div class="chips convs-f" id="cv-f"></div>
       <div class="cv-list" id="cv-list"></div>
@@ -2451,14 +2451,15 @@ $("#c-gpt").addEventListener("click", async e=>{
   await copiar(armarPrompt(msgs), e.currentTarget);
   window.open(url, "_blank", "noopener"); toast("Copiado: pegalo en ChatGPT (Ctrl+V)", 3000);
 });
-$("#c-new").addEventListener("click", ()=>{ PANEL=null; CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); });
+const chatNuevo=()=>{ PANEL=null; CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre").value=""; $("#m-lugar").value=""; renderChat(); renderLista(); $("#m-nombre").focus(); };
+$("#c-new").addEventListener("click", chatNuevo); $("#c-new2").addEventListener("click", chatNuevo);
 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado
 function guardarCharla(){
   const nombre=$("#m-nombre").value.trim(), lugar=$("#m-lugar").value.trim();
   const msgs=CHAT.filter(m=>m.txt).map(m=>({de:m.de, txt:m.txt, ...(m.k?{k:m.k}:{}), ...(m.busq?{busq:m.busq.map(r=>({user:r.user, seguidores:r.seguidores??null})), hecho:!!m.hecho}:{})}));
-  const titulo=(CHAT.find(m=>m.de==="dj"&&m.txt)?.txt||"").slice(0,45);
+  const titulo=(CHAT.find(m=>m.de==="dj"&&m.txt)?.txt||"").slice(0,90);
   if(!msgs.length && !nombre) return;
   if(!CUR) CUR="c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const prev=CHARLAS[CUR]||{};

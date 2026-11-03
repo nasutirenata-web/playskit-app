@@ -2472,6 +2472,7 @@ const chatNuevo=()=>{ PANEL=null; CUR=null; CURLEAD=null; CHAT=[]; $("#m-nombre"
 $("#c-new").addEventListener("click", chatNuevo); $("#c-new2").addEventListener("click", chatNuevo);
 
 /* Conversaciones guardadas: cada charla se guarda sola; ✓ vendida, ✗ no */
+let CV_GRP={}; try{ CV_GRP=JSON.parse(localStorage.getItem("ps-grupos-chats")||"{}")||{}; }catch{}
 let CUR=null, CVF="", CVDEL=null;   // CVDEL: conversación esperando confirmar el borrado
 function guardarCharla(){
   const nombre=$("#m-nombre").value.trim(), lugar=$("#m-lugar").value.trim();
@@ -2495,7 +2496,7 @@ function renderLista(){
   $("#cv-sum").innerHTML=`<span class="si">${ic("ok","sm")}${n("si")} vendidas</span><span class="no">✗ ${n("no")} no</span><span>${n("")} abiertas</span>`;
   $("#cv-f").innerHTML=[["","Todas"],["si","Vendidas"],["no","No"],["abierta","Abiertas"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${CVF===v}">${l}</button>`).join("");
   const vis=all.filter(C=>!CVF || (CVF==="abierta" ? !C.resultado : C.resultado===CVF));
-  el.innerHTML = vis.length ? vis.map(C=>{
+  const item=C=>{
     const ult=[...(C.msgs||[])].reverse().find(m=>m.de==="dj");
     return `<div class="cv ${C.id===CUR?"on":""} ${C.resultado||""}" data-cv="${C.id}">
       <div class="cv-main"><b>${esc(C.nombre||C.titulo||"Chat sin título")}</b><span class="sub">${(C.msgs||[]).length} mensajes · ${corta(C.fecha)}</span>
@@ -2503,10 +2504,22 @@ function renderLista(){
       <div class="cv-res">${CVDEL===C.id
         ? `<span class="sub">¿Borrar?</span><button type="button" class="btn sm danger" data-cvok>Sí</button><button type="button" class="btn sm ghost" data-cvno>No</button>`
         : `<button type="button" class="r si" data-res="si" aria-pressed="${C.resultado==="si"}" title="Vendida" aria-label="Vendida">✓</button><button type="button" class="r no" data-res="no" aria-pressed="${C.resultado==="no"}" title="No se vendió" aria-label="No se vendió">✗</button><button type="button" class="r del" data-cvdel title="Borrar conversación" aria-label="Borrar conversación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}</div></div>`;
-  }).join("") : `<div class="empty" style="padding:10px 4px">${all.length?"Nada con ese filtro.":"Todavía no hay chats. Escribí algo y se guarda solo."}</div>`;
+  };
+  const vacio=`<div class="empty" style="padding:10px 4px">${all.length?"Nada con ese filtro.":"Todavía no hay chats. Escribí algo y se guarda solo."}</div>`;
+  if(!vis.length){ el.innerHTML=vacio; return; }
+  if(!ADMIN){ el.innerHTML=vis.map(item).join(""); return; }
+  // la admin ve los chats separados por persona (los suyos abiertos, los de cada setter cerrados) para no tener cientos juntos
+  const yo=(YO||"").toLowerCase(), grupos={};
+  vis.forEach(C=>{ const d=(C.dueno||yo||"").toLowerCase(); (grupos[d]=grupos[d]||[]).push(C); });
+  const orden=Object.keys(grupos).sort((a,b)=>(a===yo?-1:b===yo?1:nomMail(a).localeCompare(nomMail(b))));
+  el.innerHTML=orden.map(d=>{ const abierto=d in CV_GRP ? !!CV_GRP[d] : d===yo;
+    return `<div class="cv-grp" data-g="${esc(d)}" role="button" tabindex="0" style="display:flex;gap:8px;align-items:center;padding:10px 6px;cursor:pointer;font-weight:600;border-bottom:1px solid var(--line)">${abierto?"▾":"▸"} ${d===yo?"Mis chats":esc(nomMail(d))}<span class="sub" style="margin-left:auto">${grupos[d].length}</span></div>`+(abierto?grupos[d].map(item).join(""):""); }).join("");
 }
 $("#cv-f").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b){ CVF=b.dataset.v; renderLista(); } });
 $("#cv-list").addEventListener("click", e=>{
+  const g=e.target.closest("[data-g]");
+  if(g){ const d=g.dataset.g, yo=(YO||"").toLowerCase(); CV_GRP[d]=!(d in CV_GRP ? CV_GRP[d] : d===yo);
+    try{ localStorage.setItem("ps-grupos-chats", JSON.stringify(CV_GRP)); }catch{} renderLista(); return; }
   const it=e.target.closest("[data-cv]"); if(!it) return; const C=CHARLAS[it.dataset.cv]; if(!C) return;
   if(e.target.closest("[data-cvdel]")){ CVDEL=C.id; renderLista(); return; }
   if(e.target.closest("[data-cvno]")){ CVDEL=null; renderLista(); return; }

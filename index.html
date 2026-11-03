@@ -2170,15 +2170,37 @@ $("#bq-res").addEventListener("click", async e=>{
   if(await agregarBQ(r, ADMIN ? $("#bq-para")?.value : "")){ b.disabled=true; b.textContent="Agregado ✓"; }
 });
 // búsqueda desde el chat: "/buscar dj techno rosario" -> muestra solo DJs nuevos, con botón Agregar
-async function buscarEnChat(q, para){
-  CHAT.push({de:"dj", txt:"/buscar "+q});
+// entiende un pedido en lenguaje normal ("productores con poca música que necesiten mandar demos, sin web") y lo pasa a búsquedas de Instagram + filtro de seguidores/publicaciones
+async function entenderBusqueda(v){
+  try{
+    const {data,error}=await SB.functions.invoke("chat",{body:{prompt:"Convertí este pedido en una búsqueda de perfiles de Instagram. Pedido: «"+v.slice(0,500)+"»\n"
+      +"Contexto: buscamos DJs y productores de música electrónica con poca música publicada y sin web propia, para venderles una web presskit con la que mandan demos a sellos. Instagram solo busca por nombre de usuario y palabras de la bio, así que NO incluyas 'sin web', 'sellos', 'demos' ni 'poca música' en las consultas.\n"
+      +"Respondé SOLO este JSON, sin texto extra: {\"consultas\":[\"2 o 3 búsquedas cortas de 2 a 4 palabras, en español o inglés, ej: productor musical techno, music producer argentina, beatmaker\"],\"max_seguidores\":número o null,\"max_publicaciones\":número o null}\n"
+      +"Si el pedido dice poca música, emergente, chico, que recién empieza o parecido: max_seguidores 20000 y max_publicaciones 300. Si no dice nada de eso: null."}});
+    if(error) return null;
+    const m=String(data&&data.text||"").match(/\{[\s\S]*\}/); if(!m) return null;
+    const o=JSON.parse(m[0]);
+    const cs=(Array.isArray(o.consultas)?o.consultas:[]).map(x=>String(x).trim().slice(0,60)).filter(Boolean).slice(0,3);
+    return cs.length ? {consultas:cs, maxSeg:+o.max_seguidores||0, maxPub:+o.max_publicaciones||0} : null;
+  }catch{ return null; }
+}
+async function buscarEnChat(q, para, natural){
+  CHAT.push({de:"dj", txt:natural?q:"/buscar "+q});
   const slot={de:"setter", txt:"Buscando… puede tardar hasta un minuto"}; CHAT.push(slot); renderChat();
   PENSANDO=true; $("#c-send").disabled=true;
   try{
     if(!SB) throw new Error("La búsqueda funciona en la versión web.");
     // 3 búsquedas parecidas al mismo tiempo (50 cada una): salen más DJs distintos y no se espera una atrás de otra
-    const base=q.replace(/s+/g," ").trim(), conDj=/djs?/i.test(base);
-    const variantes=[base, conDj?base+" music":"dj "+base];
+    let variantes=null, filtro=null;
+    if(natural){
+      slot.txt="Entendiendo tu pedido…"; renderChat();
+      const plan=await entenderBusqueda(q);
+      if(plan){ variantes=plan.consultas.slice(0,2); if(plan.maxSeg||plan.maxPub) filtro=r=>(!plan.maxSeg||r.seguidores==null||r.seguidores<=plan.maxSeg)&&(!plan.maxPub||r.publicaciones==null||r.publicaciones<=plan.maxPub); }
+      else { const d=q.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i); q=/productor|producer|beat/i.test(q)?"productor musical":"dj "+((d&&d[1])||"electronica").trim(); }
+      slot.txt="Buscando… puede tardar hasta un minuto"; renderChat();
+    }
+    const base=q.replace(/\s+/g," ").trim(), conDj=/\bdjs?\b/i.test(base);
+    if(!variantes) variantes=[base, /productor|producer/i.test(base)?"music producer":(conDj?base+" music":"dj "+base)];
     let res=await Promise.allSettled(variantes.map(v=>SB.functions.invoke("chat",{body:{buscar:v, limite:40, apify:miApify()}})));
     // si en paralelo no vino nada (Apify gratis a veces rechaza 2 búsquedas juntas), reintenta con una sola como antes
     const vacio=r=>r.status!=="fulfilled"||r.value.error||!(r.value.data&&r.value.data.resultados&&r.value.data.resultados.length);
@@ -2196,13 +2218,15 @@ async function buscarEnChat(q, para){
     }
     if(sinClave && !todos.length) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
     if(errMsg && !todos.length) throw new Error(errMsg);
-    const nuevos=sinWebPropia(await sinRepetidos(todos));
+    let nuevos=sinWebPropia(await sinRepetidos(todos));
+    const antes=nuevos.length; if(filtro) nuevos=nuevos.filter(filtro);   // ICP: poca música (pocas publicaciones y seguidores)
+    const fuera=antes-nuevos.length;
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
     const cargados=[]; let sig=0;
     await Promise.all(Array.from({length:5},async()=>{ while(sig<nuevos.length){ const r=nuevos[sig++]; try{ if(await agregarBQ(r, para, true)) cargados.push(r); }catch{} slot.txt="Cargando DJs a tu lista… "+cargados.length+" de "+nuevos.length; renderChat(); } }));
     const rep=todos.length-cargados.length;
-    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban o tienen web propia)":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" descartados (ya estaban, tienen web propia"+(fuera?" o tienen mucha música/seguidores":"")+")":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados o no encajan. Probá otras palabras." : "No encontré perfiles con esas palabras.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
@@ -2555,15 +2579,13 @@ $("#c-form").addEventListener("submit", e=>{
     }catch(err){ slot.txt=err.message||"No pude consultar Apify ahora."; } renderChat(); guardarCharla(); })();
     return; }
   // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
-  let bus=v.match(/^\/buscar\s+(.+)/i);
-  if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu)\w*/i.test(v) && /\bdjs?\b/i.test(v)){
-    const d=v.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i);
-    bus=[v, "dj "+((d&&d[1])||"electronica").trim()]; }
+  let bus=v.match(/^\/buscar\s+(.+)/i), natural=false;
+  if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu|necesit|quier|arm[aá]me)\w*/i.test(v) && /\b(djs?|productor\w*|producers?|artistas?|beatmakers?)\b/i.test(v)){ bus=[v, v]; natural=true; }
   if(bus){
     // la admin puede decir "para Ivan": los DJs se cargan a la lista de esa setter
     let para=null;
     if(ADMIN){ const vl=v.toLowerCase(); const p=(EQ||[]).find(p=>p.rol!=="admin" && [(p.nombre||"").split(" ")[0], p.email.split("@")[0].split(/[._\d]+/)[0]].some(n=>n.length>=3 && new RegExp("\\b"+n.toLowerCase()+"\\b").test(vl))); if(p) para=p.email.toLowerCase(); }
-    $("#c-text").value=""; buscarEnChat(bus[1].trim(), para); return; }
+    $("#c-text").value=""; buscarEnChat(bus[1].trim(), para, natural); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }
   $("#c-text").value=""; responderIA(v);
 });

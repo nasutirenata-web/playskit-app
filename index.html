@@ -1038,6 +1038,7 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
       <details class="rapidos" id="busq" style="margin-top:10px"><summary>Buscar DJs por palabra</summary>
         <form class="lupa" id="bq-f" style="margin-top:8px;max-width:none"><input type="search" id="bq-q" placeholder="Ej: dj techno rosario" aria-label="Palabras para buscar DJs" autocomplete="off">
           <select id="bq-n" aria-label="Cuántos resultados"><option value="20">20</option><option value="30" selected>30</option><option value="50">50</option></select>
+          <select id="bq-para" aria-label="Cargar los DJs a la lista de" hidden></select>
           <button class="btn pri" type="submit" id="bq-go">Buscar</button></form>
         <div class="sub" style="margin-top:8px">Tu token de Apify (opcional: gasta tu crédito gratis, no el de Renata)</div><input type="password" id="bq-tk" placeholder="Pegá tu token de Apify" aria-label="Tu token de Apify" autocomplete="off" style="width:100%;margin-top:4px"><div class="sub" id="bq-tkm"></div>
         <div class="sub" id="bq-msg" style="margin-top:6px"></div><div id="bq-res"></div></details>
@@ -1569,6 +1570,10 @@ async function cargarEquipo(){
   if(TAB==="reporte") renderPago($("#r-dia").value||hoy());
 }
 function pintarEquipo(){
+  // la admin elige a qué lista se cargan los DJs que busca (la suya o la de una setter)
+  const sel=$("#bq-para"); if(sel){ const actual=sel.value;
+    sel.innerHTML='<option value="">Cargar a mi lista</option>'+(EQ||[]).filter(p=>p.rol!=="admin").map(p=>`<option value="${esc(p.email)}">Cargar a ${esc(p.nombre||p.email.split("@")[0])}</option>`).join("");
+    sel.value=actual; sel.hidden=!ADMIN; }
   $("#eq-list").innerHTML = (EQ||[]).map(p=>`<div class="eq-row"><span class="av" style="--c:${p.rol==="admin"?"#3fd8e2":"#64748b"}">${esc((p.nombre||p.email)[0].toUpperCase())}</span>
     <div class="eq-who"><b>${esc(p.nombre||p.email.split("@")[0])}</b><span class="sub">${esc(p.email)}</span></div>
     <span class="tag ${p.activa?"":"pend"}">${p.rol==="admin"?"Admin":"Setter"} · ${p.activa?"ya tiene cuenta":"falta crear su cuenta"}</span>
@@ -2160,10 +2165,10 @@ async function buscarDJs(q,n){
 $("#bq-f").addEventListener("submit", e=>{ e.preventDefault(); const q=$("#bq-q").value.trim(); if(q) buscarDJs(q,$("#bq-n").value); });
 $("#bq-res").addEventListener("click", async e=>{
   const b=e.target.closest("[data-bq]"); if(!b||b.disabled) return; const r=BQ[+b.dataset.bq]; if(!r) return;
-  if(await agregarBQ(r)){ b.disabled=true; b.textContent="Agregado ✓"; }
+  if(await agregarBQ(r, ADMIN ? $("#bq-para")?.value : "")){ b.disabled=true; b.textContent="Agregado ✓"; }
 });
 // búsqueda desde el chat: "/buscar dj techno rosario" -> muestra solo DJs nuevos, con botón Agregar
-async function buscarEnChat(q){
+async function buscarEnChat(q, para){
   CHAT.push({de:"dj", txt:"/buscar "+q});
   const slot={de:"setter", txt:"Buscando… puede tardar hasta un minuto"}; CHAT.push(slot); renderChat();
   PENSANDO=true; $("#c-send").disabled=true;
@@ -2176,20 +2181,21 @@ async function buscarEnChat(q){
     const nuevos=await sinRepetidos(todos);
     // los nuevos se cargan solos a la lista de quien busca
     slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
-    const cargados=[]; for(const r of nuevos){ if(await agregarBQ(r)) cargados.push(r); }
+    const cargados=[]; for(const r of nuevos){ if(await agregarBQ(r, para)) cargados.push(r); }
     const rep=todos.length-cargados.length;
-    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a tu lista"+(rep?" · "+rep+" ya los tenían y no los repetí":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a "+(para?"la lista de "+nomMail(para):"tu lista")+(rep?" · "+rep+" ya los tenían y no los repetí":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
     if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
-async function agregarBQ(r){
+async function agregarBQ(r, para){
+  const duenio=(para||YO||"").toLowerCase()||null;   // la admin puede cargar los DJs a la lista de otra setter
   const u=r.user.toLowerCase().replace(/[^a-z0-9._]/g,""), id=idDe(u);
   const par=Object.values(LEADS).find(x=>x.user.replace(/[._-]/g,"")===u.replace(/[._-]/g,""));
   if(par){ toast("DJ REPETIDO · NO AGREGADO (ya está como @"+par.user+")", 4000); return false; }
   if(SB){ const {data:otra}=await SB.rpc("dj_duenio",{p_id:id, p_user:u}); if(otra){ toast("DJ REPETIDO · NO AGREGADO (ya está en la cuenta de "+otra+")", 4000); return false; } }
   const L={id, user:u, pais:F.pais, bio:bioDeLink(r.link), fuente:"Búsqueda", nombre:String(r.nombre||"").split(" ")[0], lugar:"", seguidores:r.seguidores==null?"":segTxtG(r.seguidores),
-    posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(YO?{por:{cargado:YO}, dueno:YO}:{})};
+    posts:r.publicaciones==null?"":String(r.publicaciones), act30:r.actividad==null?"":String(r.actividad), vistas:r.vistas==null?"":String(r.vistas), notas:"", top:false, estado:"nuevo", cargado:hoy(), upd:hoy(), ...(duenio?{por:{cargado:YO||duenio}, dueno:duenio}:{})};
   L.prio=prioDe(L).k; await store.put(L); toast("@"+u+" agregado · "+prioDe(L).n); return true;
 }
 function actualizarCompletar(){
@@ -2504,7 +2510,11 @@ $("#c-form").addEventListener("submit", e=>{
   if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu)\w*/i.test(v) && /\bdjs?\b/i.test(v)){
     const d=v.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i);
     bus=[v, "dj "+((d&&d[1])||"electronica").trim()]; }
-  if(bus){ $("#c-text").value=""; buscarEnChat(bus[1].trim()); return; }
+  if(bus){
+    // la admin puede decir "para Ivan": los DJs se cargan a la lista de esa setter
+    let para=null;
+    if(ADMIN){ const vl=v.toLowerCase(); const p=(EQ||[]).find(p=>p.rol!=="admin" && [(p.nombre||"").split(" ")[0], p.email.split("@")[0].split(/[._\d]+/)[0]].some(n=>n.length>=3 && new RegExp("\\b"+n.toLowerCase()+"\\b").test(vl))); if(p) para=p.email.toLowerCase(); }
+    $("#c-text").value=""; buscarEnChat(bus[1].trim(), para); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }
   $("#c-text").value=""; responderIA(v);
 });

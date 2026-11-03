@@ -2319,7 +2319,7 @@ function renderChat(){
     : m.de==="dj"
     ? `<div class="b me"><span class="who-l">El DJ dijo</span><div class="t">${esc(m.txt)}</div></div>`
     : m.busq
-    ? `<div class="b bot"><span class="who-l">Búsqueda</span><div class="t">${esc(m.txt)}${m.busq.map((r,j)=>`<div class="bq-row"><a class="ig-link" href="${ig(r.user.toLowerCase())}" target="_blank" rel="noopener"><b>@${esc(r.user)}</b></a> <span class="sub">${r.seguidores!=null?esc(String(r.seguidores))+" seg":""}</span><button type="button" class="btn sm" data-bqc="${i}:${j}">Agregar</button></div>`).join("")}</div></div>`
+    ? `<div class="b bot"><span class="who-l">Búsqueda</span><div class="t">${esc(m.txt)}<div class="b-acts"><button type="button" class="btn sm pri" data-bqall="${i}">Agregar todos (${m.busq.length})</button></div>${m.busq.map((r,j)=>`<div class="bq-row"><a class="ig-link" href="${ig(r.user.toLowerCase())}" target="_blank" rel="noopener"><b>@${esc(r.user)}</b></a> <span class="sub">${r.seguidores!=null?esc(String(r.seguidores))+" seg":""}</span><button type="button" class="btn sm" data-bqc="${i}:${j}">Agregar</button></div>`).join("")}</div></div>`
     : `<div class="b bot"><span class="who-l">${esc(m.k?(MK[m.k]?.t||m.k):"Respuesta sugerida")}</span><div class="t">${m.txt?esc(m.txt):`<span class="sub">Pensando…</span>`}</div>
         ${m.txt?`<div class="b-acts"><button class="btn sm" data-cc="${i}">Copiar</button>${m.k&&MK[m.k]?.nota?`<span class="note">${esc(MK[m.k].nota)}</span>`:""}</div>`:""}</div>`).join("");
   log.scrollTop = log.scrollHeight;
@@ -2402,6 +2402,9 @@ $("#c-opts").addEventListener("click", e=>{ const b=e.target.closest("[data-op]"
 $("#c-log").addEventListener("click", e=>{
   const op=e.target.closest("[data-op]"); if(op){ agregarPlantilla(op.dataset.op); return; }
   const d=e.target.closest("[data-dj]"); if(d){ const L=LEADS[d.dataset.dj]; if(L) elegirDJ(L); return; }
+  const all=e.target.closest("[data-bqall]");
+  if(all){ if(all.disabled) return; all.disabled=true; const lista=CHAT[+all.dataset.bqall]?.busq||[]; let n=0;
+    (async()=>{ for(const r of lista){ if(await agregarBQ(r)) n++; } all.textContent="Agregados "+n+" ✓"; document.querySelectorAll('[data-bqc^="'+all.dataset.bqall+':"]').forEach(b=>{ b.disabled=true; }); })(); return; }
   const bq=e.target.closest("[data-bqc]");
   if(bq){ if(bq.disabled) return; const [i,j]=bq.dataset.bqc.split(":"); const r=CHAT[+i]?.busq?.[+j];
     if(r) agregarBQ(r).then(ok=>{ if(ok){ bq.disabled=true; bq.textContent="Agregado ✓"; } }); return; }
@@ -2468,6 +2471,12 @@ $("#c-form").addEventListener("submit", e=>{
   // "quiero responderle…", "opciones", "plantillas": muestra las opciones de siempre dentro del chat
   if(/respond(er|erle|erles)\b|opcion|plantilla|r[aá]pid/i.test(v)){
     CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", opts:true}); $("#c-text").value=""; renderChat(); return; }
+  // "conectá esta api: apify_api_xxxx" / "/apify xxxx": guarda el token de Apify de esta setter (no se manda a la IA ni queda en la charla)
+  const tkm=v.match(/apify_api_[A-Za-z0-9]+/i) || v.match(/^\/apify\s+([A-Za-z0-9_-]{10,})/i);
+  if(tkm){ const tk=(tkm[1]||tkm[0]).trim(); try{ localStorage.setItem("ps-apify",tk); }catch{}
+    const t=$("#bq-tk"); if(t) t.value=tk; const mm=$("#bq-tkm"); if(mm) mm.textContent="✅ Guardado: usando tu cuenta de Apify";
+    $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
+  if(/^\/apify\s*$/i.test(v)){ $("#c-text").value=""; CHAT.push({de:"setter", txt:"Pegá tu token de Apify acá en el chat (empieza con apify_api_) y lo conecto."}); renderChat(); return; }
   const bus=v.match(/^\/buscar\s+(.+)/i);
   if(bus){ $("#c-text").value=""; buscarEnChat(bus[1].trim()); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }

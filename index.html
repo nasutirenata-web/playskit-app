@@ -2159,8 +2159,12 @@ async function buscarEnChat(q){
     if(data&&data.sinClave) throw new Error("Falta conectar Apify: Renata tiene que guardar el token (APIFY_TOKEN) en Supabase.");
     const todos=(data&&data.resultados)||[];
     const nuevos=await sinRepetidos(todos);
-    slot.txt = nuevos.length ? nuevos.length+" DJs nuevos"+(todos.length>nuevos.length?" · "+(todos.length-nuevos.length)+" ya estaban y no los muestro":"") : (todos.length ? "Los "+todos.length+" ya los tenías cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
-    if(nuevos.length) slot.busq=nuevos;
+    // los nuevos se cargan solos a la lista de quien busca
+    slot.txt="Cargando "+nuevos.length+" DJs a tu lista…"; renderChat();
+    const cargados=[]; for(const r of nuevos){ if(await agregarBQ(r)) cargados.push(r); }
+    const rep=todos.length-cargados.length;
+    slot.txt = cargados.length ? "✅ Cargué "+cargados.length+" DJs nuevos a tu lista"+(rep?" · "+rep+" ya los tenían y no los repetí":"") : (todos.length ? "Los "+todos.length+" ya estaban cargados. Probá otras palabras." : "No encontré perfiles con esas palabras.");
+    if(cargados.length){ slot.busq=cargados; slot.hecho=true; }
   }catch(err){ slot.txt=err.message||"No pude buscar ahora."; }
   PENSANDO=false; $("#c-send").disabled=false; renderChat(); guardarCharla();
 }
@@ -2319,7 +2323,7 @@ function renderChat(){
     : m.de==="dj"
     ? `<div class="b me"><span class="who-l">El DJ dijo</span><div class="t">${esc(m.txt)}</div></div>`
     : m.busq
-    ? `<div class="b bot"><span class="who-l">Búsqueda</span><div class="t">${esc(m.txt)}<div class="b-acts"><button type="button" class="btn sm pri" data-bqall="${i}">Agregar todos (${m.busq.length})</button></div>${m.busq.map((r,j)=>`<div class="bq-row"><a class="ig-link" href="${ig(r.user.toLowerCase())}" target="_blank" rel="noopener"><b>@${esc(r.user)}</b></a> <span class="sub">${r.seguidores!=null?esc(String(r.seguidores))+" seg":""}</span><button type="button" class="btn sm" data-bqc="${i}:${j}">Agregar</button></div>`).join("")}</div></div>`
+    ? `<div class="b bot"><span class="who-l">Búsqueda</span><div class="t">${esc(m.txt)}${m.hecho?"":`<div class="b-acts"><button type="button" class="btn sm pri" data-bqall="${i}">Agregar todos (${m.busq.length})</button></div>`}${m.busq.map((r,j)=>`<div class="bq-row"><a class="ig-link" href="${ig(r.user.toLowerCase())}" target="_blank" rel="noopener"><b>@${esc(r.user)}</b></a> <span class="sub">${r.seguidores!=null?esc(String(r.seguidores))+" seg":""}</span>${m.hecho?`<span class="sub">✓ cargado</span>`:`<button type="button" class="btn sm" data-bqc="${i}:${j}">Agregar</button>`}</div>`).join("")}</div></div>`
     : `<div class="b bot"><span class="who-l">${esc(m.k?(MK[m.k]?.t||m.k):"Respuesta sugerida")}</span><div class="t">${m.txt?esc(m.txt):`<span class="sub">Pensando…</span>`}</div>
         ${m.txt?`<div class="b-acts"><button class="btn sm" data-cc="${i}">Copiar</button>${m.k&&MK[m.k]?.nota?`<span class="note">${esc(MK[m.k].nota)}</span>`:""}</div>`:""}</div>`).join("");
   log.scrollTop = log.scrollHeight;
@@ -2477,7 +2481,11 @@ $("#c-form").addEventListener("submit", e=>{
     const t=$("#bq-tk"); if(t) t.value=tk; const mm=$("#bq-tkm"); if(mm) mm.textContent="✅ Guardado: usando tu cuenta de Apify";
     $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
   if(/^\/apify\s*$/i.test(v)){ $("#c-text").value=""; CHAT.push({de:"setter", txt:"Pegá tu token de Apify acá en el chat (empieza con apify_api_) y lo conecto."}); renderChat(); return; }
-  const bus=v.match(/^\/buscar\s+(.+)/i);
+  // "/buscar dj techno rosario" o en lenguaje normal: "buscá DJs de electrónica que no se repitan con los que ya tenemos"
+  let bus=v.match(/^\/buscar\s+(.+)/i);
+  if(!bus && /\b(busc|busqu|encontr|traeme|dame|consegu)\w*/i.test(v) && /\bdjs?\b/i.test(v)){
+    const d=v.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i);
+    bus=[v, "dj "+((d&&d[1])||"electronica").trim()]; }
   if(bus){ $("#c-text").value=""; buscarEnChat(bus[1].trim()); return; }
   if(!SAMPLE){ toast("La IA no está disponible acá. Usá las opciones."); return; }
   $("#c-text").value=""; responderIA(v);

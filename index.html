@@ -3000,9 +3000,18 @@ document.addEventListener("click", async e=>{
   if(b.dataset.arBajar){
     b.disabled=true;
     const {data,error}=await SB.storage.from("archivos").createSignedUrl(a.ruta,120,{download:a.archivo||true});
+    if(error||!data){ b.disabled=false; toast("No pude descargar. Probá de nuevo.", 4000); return; }
+    // nombre con extensión: si el archivo es PDF siempre termina en .pdf
+    const esPdf=/pdf/i.test(a.tipo||"")||/\.pdf$/i.test(a.archivo||a.ruta||"");
+    let nom=String(a.archivo||a.nombre||"archivo").replace(/[\\/:*?"<>|]+/g,"_");
+    if(esPdf && !/\.pdf$/i.test(nom)) nom=nom.replace(/\.[A-Za-z0-9]{1,5}$/,"")+".pdf";
+    const guardar=(href)=>{ const l=document.createElement("a"); l.href=href; l.download=nom; l.rel="noopener"; document.body.appendChild(l); l.click(); l.remove(); };
+    try{
+      const r=await fetch(data.signedUrl); if(!r.ok) throw new Error("http "+r.status);
+      const bl=await r.blob(); const url=URL.createObjectURL(new Blob([bl],{type:esPdf?"application/pdf":(a.tipo||bl.type||"application/octet-stream")}));
+      guardar(url); setTimeout(()=>URL.revokeObjectURL(url),30000);
+    }catch{ guardar(data.signedUrl); }   // si no se pudo bajar directo, usa el link firmado (igual se descarga)
     b.disabled=false;
-    if(error||!data){ toast("No pude descargar. Probá de nuevo.", 4000); return; }
-    const l=document.createElement("a"); l.href=data.signedUrl; l.download=a.archivo||""; l.rel="noopener"; document.body.appendChild(l); l.click(); l.remove();
   } else if(b.dataset.arReemp){ AR_REEMP=id; $("#ar-reemp").value=""; $("#ar-reemp").click(); }
   else if(b.dataset.arDel){ ARDEL=id; renderArchivos(); }
   else if(b.dataset.arBorrar){

@@ -2446,6 +2446,26 @@ function agregarPlantilla(k){
   CHAT.push({de:"setter", k, txt:texto(k, chatLead(), MT)}); renderChat(); guardarCharla();
 }
 // arma las instrucciones completas para la IA (sirve para el chat de la app y para pegar en ChatGPT)
+// resumen de lo que hay cargado en la cuenta de quien pregunta (la IA no ve nada más que esto)
+function datosApp(){
+  const yo=(YO||"").toLowerCase();
+  const L=Object.values(LEADS).filter(x=>!x.parte && (ADMIN || !x.dueno || String(x.dueno).toLowerCase()===yo));
+  const cuenta=(arr,fn)=>arr.filter(fn).length;
+  const hace7=sumar(hoy(),-6);
+  const nombreDe=m=>{ const e=(EQ||[]).find(p=>p.email.toLowerCase()===String(m||"").toLowerCase()); return e?.nombre||String(m||"sin dueño").split("@")[0]; };
+  const resumen=arr=>arr.length+" DJs cargados · "+cuenta(arr,x=>x.dm)+" con primer mensaje enviado · "+cuenta(arr,x=>x.resp)+" respondieron · "+cuenta(arr,x=>x.planes)+" con planes enviados · "+cuenta(arr,x=>x.cerrado)+" cerrados";
+  const porEstado=(ESTADOS||[]).map(([k,l])=>[l,cuenta(L,x=>x.estado===k)]).filter(([,n])=>n).map(([l,n])=>l+" "+n).join(", ");
+  const porTipo=["DJ","DJ productor","Productor"].map(t=>t+" "+cuenta(L,x=>x.tipo===t)).join(", ")+", sin tipo "+cuenta(L,x=>!x.tipo);
+  let t=(ADMIN?"Cuenta de Renata (ve a todas las setters)":"Cuenta de la setter "+nombreDe(YO))+" · hoy es "+hoy()+"\n";
+  t+="TOTAL: "+resumen(L)+"\n";
+  t+="Cargados hoy: "+cuenta(L,x=>x.cargado===hoy())+" · en los últimos 7 días: "+cuenta(L,x=>x.cargado&&x.cargado>=hace7)+"\n";
+  t+="Por estado: "+(porEstado||"–")+"\nPor tipo: "+porTipo+"\n";
+  t+="Bio: "+["Linktree","Nada","Drive","Plantilla","Otra"].map(b=>b+" "+cuenta(L,x=>x.bio===b)).join(", ")+"\n";
+  if(ADMIN){ const g={}; L.forEach(x=>{ const k=String(x.dueno||"").toLowerCase(); (g[k]=g[k]||[]).push(x); }); t+="POR SETTER:\n"+Object.entries(g).map(([m,arr])=>"- "+nombreDe(m)+": "+resumen(arr)).join("\n")+"\n"; }
+  const lista=L.slice().sort((a,b)=>(b.cargado||"").localeCompare(a.cargado||"")).slice(0,80).map(x=>"@"+x.user+" ("+[x.tipo,x.estado,ADMIN&&x.dueno?nombreDe(x.dueno):""].filter(Boolean).join(", ")+")").join("; ");
+  return t+"Últimos DJs cargados: "+(lista||"ninguno");
+}
+const ESTRATEGIA_MSJ = "ESTRATEGIA DE MENSAJES (método SPIN adaptado a chat, con conexión antes y PAS en los seguimientos). Seguila siempre:\nCamino: día 0 calentar (like a 2 posts y respuesta real a una historia, no se vende) → día 1 apertura (mensaje A, B o C, con una primera línea que nombre algo real de su perfil) → si responde, SPIN en 4 mensajes → prueba: la web de Lucas → 2 planes → WhatsApp con Renata, que cierra.\nReglas de oro: una sola pregunta por mensaje; mensajes cortos, sin tecnicismos; usá SUS palabras; no pases al paso siguiente hasta que conteste; sin link ni precio hasta el paso de la prueba. El DJ tiene que hablar más que la setter: si la setter escribe más que él, está vendiendo en vez de preguntar.\nSPIN en 4 mensajes, uno por vez:\nS Situación (la única con dos partes): ¿Y hoy cómo conseguís las fechas? ¿Y qué te gustaría lograr este año?\nP Problema: ¿Y qué es lo que más te frena para tocar en más lugares? Si no sabe qué decir: ¿Te pasa que no te contestan, que no sabés qué mandar o que lo que mandás no se ve tan pro?\nI Implicación (la que mueve): ¿Te pasó que un boliche te pida material y la fecha no se cierre? Si dice que sí: ¿Cuántas fechas te parece que se pueden haber caído así? No agrandes el problema: preguntá y dejá que conteste.\nN Necesidad-beneficio: Si tuvieras un solo link con tus sets, fotos, rider y contacto, listo para mandar en 10 segundos, ¿cómo cambiaría eso? Lo que diga se repite en el cierre.\nPuente a la prueba: Justo eso hacemos. Mirá lo que armamos para Lucas, otro DJ (captura de la web de Lucas, sin link). ¿Te gustaría algo así con tu estilo? Si dice que sí: los 2 planes (Professional US$80, Premium US$150) y después WhatsApp con Renata.\nSi el DJ contesta distinto: 'Tengo Linktree' → Está bien para arrancar. ¿Te pasó que te pidan presskit y no sepas qué mandar? (va a I). 'Me escriben solos, no necesito' → misma pregunta de Implicación (va a P). '¿Cuánto sale?' → Genial. ¿Y a los lugares donde todavía no tocaste, cómo les escribís? (después prueba y planes). 'Pasame info' → Hay 2 planes, desde US$80. Antes mirá lo que hicimos para Lucas (prueba y planes). 'Ahora no' → Dale, ¿te escribo en un mes? (marcar fecha). Respuesta de una palabra → mismo paso, reformulá la pregunta más fácil. Habla de plata → ¿Cuánto te pagan por fecha? Con una que consigas, la web se paga sola.\nSeguimientos (PAS), solo si no contestó, uno por día marcado, cortos, sin repetir el primer mensaje: Día 2: [nombre], ¿pudiste ver mi mensaje? Me quedé pensando en tu [set en lugar]. ¿Qué es lo primero que mandás cuando querés tocar en un lugar nuevo? Día 5: Mucho DJ pierde fechas por mandar el material desordenado. Te dejo un ejemplo de cómo queda todo en un solo link (captura de la web de Lucas). ¿Qué sumarías de lo tuyo para que un boliche te elija? Día 10: Cierro por acá. Si algún día querés tu presskit web, escribime. ¿Conocés a algún DJ al que le pueda servir? Día 30 (solo si tiene una novedad real en su perfil): Hola [nombre]! Vi que tocaste en [lugar nuevo / fecha reciente]. Felicitaciones. ¿Ya tenés tu material ordenado para los próximos lugares?\nTono: preguntas muy cortas y bajas, como escribe una persona normal por Instagram (estilo NEPQ). Objeciones: aceptar, preguntar, reencuadrar, guiar (método de Agus).\nRitmo: semana 1 son 15 mensajes nuevos por día, semana 2 son 25, desde la 3 son 30; máximo 10 por hora; cambiar siempre la primera línea; si Instagram da una advertencia, frenar 48 horas. Menos de 10% de respuesta: cambiar la apertura o revisar el perfil de la setter. Se prueba A/B de la apertura la primera semana (A, B y C a la misma cantidad de DJs) y se queda la que tenga más respuestas.\nNúmeros que se miran todos los días: % respuesta (respondieron ÷ enviados), % llega a la I, % pide planes, % pasa a WhatsApp.";
 function armarPrompt(mensajes){
   const tono = MT==="vos"?"español rioplatense con vos (Argentina)":"español neutro con tú";
   const lib = ["/p1","/p2","/p3","/p4","/web","/planes","/wsp","¿Cuánto sale?","Tengo Linktree / Canva","Tengo web de plantilla","Ahora no","No tengo plata","Pasame info"]
@@ -2453,10 +2473,13 @@ function armarPrompt(mensajes){
   const charla = mensajes.filter(m=>m.txt).map(m=>`${m.de==="dj"?"DJ":"Setter"}: ${m.txt}`).join("\n");
   const nombre = $("#m-nombre").value.trim();
   return `Sos la setter de Playskit: Renata, DJ argentina, hace webs presskit para DJs. Por Instagram tu trabajo es conversar con el DJ y llevarlo hasta los planes y su WhatsApp. No hay llamadas: si dice que quiere, pedís su WhatsApp y Renata lo cierra por ahí.
-Orden de la charla: preguntar cómo consigue fechas (situación) → qué quiere lograr (objetivo) → qué le falta (problema) → que diga él que un link pro le ayudaría (solución) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
+Orden de la charla: SPIN (situación → problema → implicación → necesidad) → mostrar la web de Lucas → pasar los 2 planes → pedir WhatsApp.
+${ESTRATEGIA_MSJ}
 Reglas: usá sus mismas palabras; una sola pregunta por mensaje; mensajes naturales, sin cortar ni resumir de más (terminá siempre las frases); nunca descuentos ni cambiar precios (Professional US$80, Premium US$150); nunca prometer fechas ni resultados; ante una objeción: aceptar → preguntar → mostrar el ejemplo, nunca discutir; el link de Lucas es ${LUCAS}.
 ${CFG.estilo?`Estilo de contacto a imitar (el de Agus Cuenca y Alexis Assad): ${CFG.estilo}\n`:""}REGLA PRINCIPAL: nunca inventes nada. No inventes datos, números, precios, fechas, resultados, nombres, links ni acciones que hiciste. Si no sabés algo o no podés hacerlo, decí claro "eso no lo sé" o "eso no lo puedo hacer desde acá" y no rellenes. Solo usá lo que está en estas instrucciones y en la charla.
-No sabés cuántos créditos, saldo ni datos de cuentas hay.
+Abajo tenés los DATOS DE LA APP: son reales y son de la cuenta de quien te escribe. Si te preguntan cuántos DJs cargaron, cuántos mensajes, respuestas, quién cargó más, cuántos son productores, etc., contestá con esos números, corto y claro. No sabés cuántos créditos ni saldo de Apify hay.
+DATOS DE LA APP:
+${datosApp()}
 Vos NO podés buscar, filtrar ni cargar DJs: eso lo hace el comando /buscar (que ya descarta repetidos y DJs con web propia). Nunca digas "listo, filtré" ni "cargué" nada; si te piden buscar DJs, decí que escriban /buscar seguido de las palabras (ej: /buscar dj techno rosario).
 Esta app SÍ se conecta con Apify (busca DJs nuevos sin repetir y los carga a la lista): si te piden conectar una API o integración, no digas que no se puede; decí que peguen su token (apify_api_…) en el chat.
 Escribí en ${tono}${nombre?`; el DJ se llama ${nombre}`:""}.
@@ -2466,7 +2489,7 @@ ${lib}
 Conversación hasta ahora:
 ${charla}
 
-Escribí SOLO el próximo mensaje de la setter, listo para pegar en Instagram. Sin comillas, sin explicaciones.`;
+Si lo último que escribió quien te habla NO es un mensaje de un DJ sino una pregunta sobre la app o sus números (cuántos, total, quién, estado), respondé esa pregunta con los DATOS DE LA APP, en pocas líneas, sin armar un mensaje para Instagram. Si no, escribí SOLO el próximo mensaje de la setter, listo para pegar en Instagram. Sin comillas, sin explicaciones.`;
 }
 const PARTE_CAMPOS=[["mensajes","mensajes"],["seguimientos","seguimientos"],["respuestas","respuestas"],["planes","planes"],["interesados","interesados"],["ventas","ventas"]];
 // "hoy hicimos 12 mensajes, 3 seguimientos y 1 venta" -> {mensajes:12, seguimientos:3, ventas:1}

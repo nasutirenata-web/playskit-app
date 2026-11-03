@@ -1927,10 +1927,12 @@ function initCargar(){
   // un DJ "incompleto" es el que le falta el número de seguidores o el de publicaciones
   const faltaDato = L => !L.seguidores || !L.posts;
   // autoInfo: pide el perfil a Supabase (Apify, plan gratis). Devuelve "ok", "vacio", "sinClave" o "error"; quiet = sin avisos
+  let ULT_ERR="";   // último mensaje de error de Apify, para decirle a la setter qué pasó
   const autoInfo = async (L, quiet)=>{
     try{
       const {data, error} = await SB.functions.invoke("chat", {body:{perfil:L.user, apify:miApify()}});
-      if(error || !data) return "error";
+      if(error){ try{ ULT_ERR=(await error.context.json()).error||""; }catch{} return "error"; }
+      if(!data) return "error";
       if(data.sinClave) return "sinClave";
       const cur=LEADS[L.id]; if(!cur) return "error";
       if(data.vacio){ await store.put({...cur, intento:hoy()}); return "vacio"; }   // perfil privado o que no existe: no se vuelve a probar por 7 días
@@ -1955,7 +1957,7 @@ function initCargar(){
   let COMPLETANDO=false;
   const completarTodos = async()=>{
     if(COMPLETANDO) return; const lista=pendientesDatos(); if(!lista.length) return;
-    COMPLETANDO=true; let hechos=0, ok=0, fallos=0, corte=false, idx=0;
+    COMPLETANDO=true; ULT_ERR=""; let hechos=0, ok=0, fallos=0, corte=false, idx=0;
     const btn=$("#l-completar"); const pintar=()=>{ if(btn) btn.textContent="Completando "+hechos+"/"+lista.length+"…"; };
     pintar();
     const obrero=async()=>{
@@ -1967,7 +1969,7 @@ function initCargar(){
     };
     await Promise.all([obrero(), obrero(), obrero()]);
     COMPLETANDO=false;
-    toast(corte ? "Frené: Apify no responde o no queda crédito. Completé "+ok+" de "+lista.length+"." : "Listo: completé "+ok+" de "+lista.length+". Los que faltan no tienen esos datos públicos.", 7000);
+    toast(corte ? "Frené: "+(ULT_ERR||"Apify no responde o no queda crédito")+" Completé "+ok+" de "+lista.length+"." : "Listo: completé "+ok+" de "+lista.length+". Los que faltan no tienen esos datos públicos.", 7000);
     actualizarCompletar();
   };
   window.PS_completar={cuantos:()=>pendientesDatos().length, corriendo:()=>COMPLETANDO};

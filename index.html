@@ -2193,7 +2193,6 @@ async function buscarEnChat(q, para, natural){
     // 3 búsquedas parecidas al mismo tiempo (50 cada una): salen más DJs distintos y no se espera una atrás de otra
     let variantes=null, filtro=null;
     if(natural){
-      slot.txt="Entendiendo tu pedido…"; renderChat();
       // "busca productores" sin género: búsqueda general, no se reparte por estilos
       const esProd=/productor|producer|beatmaker/i.test(q), conGenero=/techno|house|trance|melodic|afro|minimal|progressive|drum|dnb|bass|deep|latin|reggaeton|trap|hip ?hop|cumbia|dubstep|hardstyle|ambient|lo-?fi|rock|pop\b/i.test(q);
       const poca=/poca|emergent|chic[oa]|reci[eé]n|empiez/i.test(q);
@@ -2453,6 +2452,9 @@ async function responderIA(dijo){
   try{
     const r = await SAMPLE(prompt, {modelTier:"quick", cache:false, onText:({text})=>{ slot.txt=text; renderChat(); }});
     slot.txt = (r.text||"").trim() || "No me salió nada. Probá de nuevo.";
+    // la IA no puede buscar, filtrar ni cargar nada: si dice que lo hizo, está inventando
+    if(/\b(filtr[eé]|cargu?[eé]|agregu?[eé]|busqu?[eé]|actualic[eé]|guard[eé]|list[oa],? (ya )?(filtr|carg|agreg))/i.test(slot.txt))
+      slot.txt="Eso no lo hice yo desde acá. Para buscar y cargar DJs escribí, por ejemplo: «busca DJs de techno» o /buscar dj techno rosario.";
   }catch(e){
     slot.txt = e?.code==="rate_limited" ? "Muchos pedidos seguidos. Esperá un minuto y probá de nuevo." : (e?.message && e.message!=="[object Object]" ? e.message+" Usá los mensajes rápidos mientras tanto." : "No pude responder ahora. Usá los mensajes rápidos.");
   }
@@ -2568,6 +2570,17 @@ $("#c-form").addEventListener("submit", e=>{
     $("#c-text").value=""; CHAT.push({de:"setter", txt:"✅ Listo, conecté tu cuenta de Apify. Ahora buscá con /buscar dj techno rosario: gasta tu crédito y no te muestra DJs repetidos."}); renderChat(); guardarCharla(); return; }
   // pide conectar Apify pero sin token: se contesta acá, nunca la IA (que decía que no trabaja con integraciones)
   if(/^\/apify\s*$/i.test(v) || (hablaApi && /conect|integr|vincul|configur|agreg/i.test(v))){ $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", txt:"Sí, esta app se conecta con Apify. Pegá tu token acá en el chat (empieza con apify_api_) y queda conectado a tu cuenta. Lo sacás en Apify → Settings → API & Integrations."}); renderChat(); return; }
+  // respuestas con datos reales de la app (la IA no los sabe y los inventaba)
+  const respuesta=txt=>{ $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); CHAT.push({de:"setter", txt}); renderChat(); guardarCharla(); };
+  if(/^\s*(ayuda|help|\/ayuda)\s*$|qu[eé] (pod[eé]s|puedes|sab[eé]s) hacer|qu[eé] comandos|c[oó]mo (te )?uso/i.test(v)){
+    return respuesta("Esto sé hacer:\n• Buscar DJs o productores nuevos y cargarlos a tu lista, sin repetidos ni DJs con web propia: «busca DJs de techno» o /buscar dj techno rosario.\n• Decirte cuántos créditos de Apify te quedan: «cuántos créditos tengo».\n• Decirte cuántos DJs tenés cargados: «cuántos DJs tengo».\n• Conectar tu Apify: pegá tu token (apify_api_…).\n• Armar el próximo mensaje para un DJ: pegá lo que te respondió.\nTodos tus chats quedan guardados a la izquierda."); }
+  if(/cu[aá]nt[oa]s\s+(djs?|leads?|perfiles|contactos)/i.test(v) && /tengo|hay|cargu?[eé]|cargados|llevo|tenemos/i.test(v)){
+    const yo=(YO||"").toLowerCase(), todos=Object.values(LEADS), mios=todos.filter(L=>(L.dueno||yo||"").toLowerCase()===yo);
+    const cuenta=(lista,f)=>lista.filter(f).length;
+    let t="Tenés "+mios.length+" DJs cargados"+(mios.length?": "+cuenta(mios,L=>L.bio==="Linktree")+" con Linktree, "+cuenta(mios,L=>L.bio==="Nada")+" sin link, "+cuenta(mios,L=>L.bio==="Plantilla")+" con web propia.":".");
+    if(ADMIN){ const por={}; todos.forEach(L=>{ const d=(L.dueno||yo||"").toLowerCase(); por[d]=(por[d]||0)+1; });
+      t+="\nPor persona: "+Object.keys(por).sort((a,b)=>por[b]-por[a]).map(d=>nomMail(d)+" "+por[d]).join(" · ")+". Total: "+todos.length+"."; }
+    return respuesta(t); }
   // "cuántos créditos me quedan": se consulta a Apify de verdad, la IA no sabe ese dato
   if(/cr[eé]ditos?|saldo/i.test(v) && /cu[aá]nt|quedan|queda|disponible|tengo|saldo/i.test(v) && !/^\/buscar/i.test(v)){
     $("#c-text").value=""; CHAT.push({de:"dj", txt:v}); const slot={de:"setter", txt:"Consultando tu cuenta de Apify…"}; CHAT.push(slot); renderChat();

@@ -2194,7 +2194,10 @@ async function buscarEnChat(q, para, natural){
     let variantes=null, filtro=null;
     if(natural){
       slot.txt="Entendiendo tu pedido…"; renderChat();
-      const plan=await entenderBusqueda(q);
+      // "busca productores" sin género: búsqueda general, no se reparte por estilos
+      const esProd=/productor|producer|beatmaker/i.test(q), conGenero=/techno|house|trance|melodic|afro|minimal|progressive|drum|dnb|bass|deep|latin|reggaeton|trap|hip ?hop|cumbia|dubstep|hardstyle|ambient|lo-?fi|rock|pop\b/i.test(q);
+      const poca=/poca|emergent|chic[oa]|reci[eé]n|empiez/i.test(q);
+      const plan=(esProd&&!conGenero) ? {consultas:["productor musical","music producer"], maxSeg:poca?20000:0, maxPub:poca?300:0} : await entenderBusqueda(q);
       if(plan){ variantes=plan.consultas.slice(0,2); if(plan.maxSeg||plan.maxPub) filtro=r=>(!plan.maxSeg||r.seguidores==null||r.seguidores<=plan.maxSeg)&&(!plan.maxPub||r.publicaciones==null||r.publicaciones<=plan.maxPub); }
       else { const d=q.match(/\bdjs?\b\s*(?:de\s+)?([^,.;]*?)(?:\s+(?:que|y|para|con|sin)\b|[,.;]|$)/i); q=/productor|producer|beat/i.test(q)?"productor musical":"dj "+((d&&d[1])||"electronica").trim(); }
       slot.txt="Buscando… puede tardar hasta un minuto"; renderChat();

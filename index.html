@@ -377,7 +377,7 @@ select option{background:var(--surface);color:var(--ink)}
 .opt-g .opt-l{font-size:12px;color:var(--muted);min-width:92px}
 
 /* Estilo del logo: cromo rosa dorado */
-:root{--chrome:linear-gradient(135deg,#fff7de 0%,#f0d487 30%,#ffffff 48%,#b88a26 66%,#f6e7b8 100%)}
+:root{--chrome:linear-gradient(135deg,#ffffff 0%,#f0d487 30%,#ffffff 48%,#b88a26 66%,#f7f3e6 100%)}
 .logo{flex-direction:column;align-items:flex-start;gap:6px}
 .logo .pk{width:120px;height:auto;filter:drop-shadow(0 6px 18px rgba(227,182,74,.22))}
 .logo b{font-size:15px;letter-spacing:.02em}
@@ -532,7 +532,7 @@ th.c,td.c{text-align:center}
 .prio.baja{background:#ede9fe;color:#6d28d9;border-color:transparent}
 :root:not([data-bg="claro"]) .prio.alta{background:rgba(248,113,113,.18);color:#fca5a5}
 :root:not([data-bg="claro"]) .prio.media{background:rgba(45,212,191,.18);color:#5eead4}
-:root:not([data-bg="claro"]) .prio.baja{background:rgba(167,139,250,.2);color:#c4b5fd}
+:root:not([data-bg="claro"]) .prio.baja{background:rgba(227,182,74,.2);color:#c4b5fd}
 .prio.big{font-size:15px;padding:5px 14px}
 /* menú arriba en horizontal, solo con las palabras (en compu; en celu ya era así) */
 @media (min-width:821px){
@@ -665,7 +665,7 @@ th.c,td.c{text-align:center}
   box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 14px rgba(30,70,110,.08) !important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 :root[data-bg="claro"] .btn:hover,:root[data-bg="claro"] .chips button:hover{background:rgba(255,255,255,.8) !important}
 :root[data-bg="claro"] .btn.pri,:root[data-bg="claro"] #tabs button[aria-selected="true"],:root[data-bg="claro"] .chips button[aria-pressed="true"]{
-  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.55) !important;
+  background:var(--grad) !important;color:#241a06 !important;border-color:rgba(255,255,255,.55) !important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px rgba(227,182,74,.32) !important}
 :root[data-bg="claro"] .btn.pri:hover{filter:brightness(1.06)}
 :root[data-bg="claro"] #tabs button:hover{background:rgba(255,255,255,.6)}
@@ -677,7 +677,7 @@ th.c,td.c{text-align:center}
 :root[data-bg="claro"] .chat-in{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo),0 10px 30px rgba(30,70,110,.12);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
 :root[data-bg="claro"] .chat-in textarea,:root[data-bg="claro"] .lupa input{box-shadow:none !important}
 :root[data-bg="claro"] .b.bot .t{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:var(--brillo)}
-:root[data-bg="claro"] .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(227,182,74,.28)}
+:root[data-bg="claro"] .b.me .t{background:var(--grad);color:#241a06;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px rgba(227,182,74,.28)}
 :root[data-bg="claro"] tr.click:hover td{background:rgba(255,255,255,.45)}
 :root[data-bg="claro"] td,:root[data-bg="claro"] th{border-bottom:1px solid rgba(160,125,50,.12)}
 :root[data-bg="claro"] .cv:hover,:root[data-bg="claro"] .cv.on{background:rgba(255,255,255,.55)}
@@ -710,7 +710,7 @@ th.c,td.c{text-align:center}
   background:rgba(255,255,255,.09) !important;border:1px solid rgba(255,255,255,.16) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.22) !important;color:var(--ink)}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn:hover,.chips button:hover){background:rgba(255,255,255,.16) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.btn.pri,#tabs button[aria-selected="true"],.chips button[aria-pressed="true"]){
-  background:var(--grad) !important;color:#ffffff !important;border-color:rgba(255,255,255,.35) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px rgba(227,182,74,.4) !important}
+  background:var(--grad) !important;color:#241a06 !important;border-color:rgba(255,255,255,.35) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px rgba(227,182,74,.4) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) #tabs button{border-radius:999px;border-bottom:0;font-weight:500}
 :root:is([data-bg="gris"],[data-bg="negro"]) #tabs button:hover{background:rgba(255,255,255,.1)}
 :root:is([data-bg="gris"],[data-bg="negro"]) #tabs .badge{background:rgba(255,255,255,.9);color:#07405e}
@@ -721,7 +721,7 @@ th.c,td.c{text-align:center}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(.chat-in textarea,.lupa input){background:transparent !important;border:0 !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) .lupa input{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.16) !important}
 :root:is([data-bg="gris"],[data-bg="negro"]) .b.bot .t{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);box-shadow:var(--brillo)}
-:root:is([data-bg="gris"],[data-bg="negro"]) .b.me .t{background:var(--grad);color:#ffffff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(227,182,74,.35)}
+:root:is([data-bg="gris"],[data-bg="negro"]) .b.me .t{background:var(--grad);color:#241a06;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(227,182,74,.35)}
 :root:is([data-bg="gris"],[data-bg="negro"]) tr.click:hover td{background:rgba(255,255,255,.07)}
 :root:is([data-bg="gris"],[data-bg="negro"]) :is(td,th){border-bottom:1px solid rgba(255,255,255,.1)}
 :root:is([data-bg="gris"],[data-bg="negro"]) .tick{background:rgba(255,255,255,.1)}
@@ -941,7 +941,7 @@ tr.pend-resp .prio{font-weight:700}
 :root:root:root .login .login-card input::placeholder{color:rgba(242,246,248,.55)}
 :root:root:root .login .login-card input:focus{outline:2px solid #e3b64a !important;outline-offset:-1px}
 :root:root:root .login .login-card input:-webkit-autofill{-webkit-text-fill-color:#f2f6f8;box-shadow:0 0 0 1000px rgba(20,28,34,.92) inset;transition:background-color 9999s}
-:root:root :is(#login,#palabra,#clave) .login-card .btn.pri{background:linear-gradient(135deg,#fff7de 0%,#f0d487 30%,#ffffff 48%,#b88a26 66%,#f6e7b8 100%) !important;color:#241a06 !important;
+:root:root :is(#login,#palabra,#clave) .login-card .btn.pri{background:linear-gradient(135deg,#ffffff 0%,#f0d487 30%,#ffffff 48%,#b88a26 66%,#f7f3e6 100%) !important;color:#241a06 !important;
   border-color:rgba(255,255,255,.45) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 6px 24px rgba(227,182,74,.28) !important}
 :root:root:root .login .login-card .lg-swap{color:#f0d487 !important}
 /* Carteles de cada setter: se abren y se cierran */
@@ -963,19 +963,43 @@ tr.grupo .g-flecha{display:inline-block;width:1.3em;margin-right:4px;opacity:.85
 .ar-info b{font-weight:600;font-size:15.5px}
 @media (max-width:640px){.ar-f{grid-template-columns:1fr}}
 /* Conversaciones: seguimiento (violeta) y cerradas (celeste) */
-:root:root .cv.seg{box-shadow:inset 3px 0 0 #a78bfa}
-:root:root .cv.si{box-shadow:inset 3px 0 0 #3fd8e2}
+:root:root .cv.seg{box-shadow:inset 3px 0 0 #e3b64a}
+:root:root .cv.si{box-shadow:inset 3px 0 0 #ffffff}
 :root:root .cv.no{box-shadow:none;opacity:1}
 :root:root .cv-res .r.seg,:root:root .cv-res .r.si{width:24px;height:24px;border-width:2px;border-style:solid;background:transparent;color:transparent}
-:root:root .cv-res .r.seg{border-color:#a78bfa}
-:root:root .cv-res .r.si{border-color:#3fd8e2}
-:root:root .cv-res .r.seg[aria-pressed="true"]{background:#a78bfa;box-shadow:0 0 10px rgba(167,139,250,.55)}
-:root:root .cv-res .r.si[aria-pressed="true"]{background:#3fd8e2;box-shadow:0 0 10px rgba(63,216,226,.55)}
+:root:root .cv-res .r.seg{border-color:#e3b64a}
+:root:root .cv-res .r.si{border-color:#ffffff}
+:root:root .cv-res .r.seg[aria-pressed="true"]{background:#e3b64a;box-shadow:0 0 10px rgba(227,182,74,.55)}
+:root:root .cv-res .r.si[aria-pressed="true"]{background:#ffffff;box-shadow:0 0 10px rgba(255,255,255,.55)}
 :root:root .cv-res .r.seg:hover,:root:root .cv-res .r.si:hover{color:transparent}
 .convs-sum .cs{display:inline-flex;align-items:center;gap:6px}
 .convs-sum .cs i{width:11px;height:11px;border-radius:50%;display:inline-block}
-.convs-sum .cs.seg i{background:#a78bfa}
-.convs-sum .cs.cer i{background:#3fd8e2}
+.convs-sum .cs.seg i{background:#e3b64a}
+.convs-sum .cs.cer i{background:#ffffff}
+/* Paleta: solo negro, dorado y blanco */
+:root:root .ktile{color:#ffffff}
+:root:root .ktile.k1{background:linear-gradient(135deg,#c99a2e,#e3b64a);color:#241a06}
+:root:root .ktile.k2{background:linear-gradient(135deg,#f2f2f2,#ffffff);color:#14110a}
+:root:root .ktile.k3{background:linear-gradient(135deg,#14110a,#2b2410);color:#f0d487;box-shadow:inset 0 0 0 1.5px #c99a2e}
+:root:root .ktile.k4{background:linear-gradient(135deg,#8a6212,#c99a2e);color:#ffffff}
+:root:root .ktile.k5{background:linear-gradient(135deg,#d8d8d8,#f7f3e6);color:#14110a}
+:root:root .ktile.k2 *,:root:root .ktile.k5 *,:root:root .ktile.k1 *{color:inherit}
+:root:root .prio.alta{background:#e3b64a;color:#241a06;border-color:transparent}
+:root:root .prio.media{background:#ffffff;color:#241a06;border-color:transparent}
+:root:root .prio.baja{background:rgba(255,255,255,.1);color:#d8d8d8;border-color:rgba(255,255,255,.3)}
+:root[data-bg="claro"]:root .prio.baja{background:#ececec;color:#444;border-color:#cfcfcf}
+:root[data-bg="claro"]:root .prio.media{background:#14110a;color:#ffffff}
+:root:root{--ok:#e3b64a}
+:root[data-bg="claro"]:root{--ok:#8a6212}
+/* Botones de estado: negro, dorado y blanco */
+:root:root .flag.env.on{background:rgba(227,182,74,.18);border-color:#e3b64a;color:#e3b64a}
+:root:root .flag.resp.on{background:#e3b64a;border-color:#e3b64a;color:#241a06}
+:root:root .flag.ebook.on{background:#ffffff;border-color:#ffffff;color:#241a06}
+:root:root .flag.planes.on{background:#14110a;border-color:#e3b64a;color:#e3b64a}
+:root[data-bg="claro"]:root .flag.env.on{background:rgba(138,98,18,.12);border-color:#8a6212;color:#8a6212}
+:root[data-bg="claro"]:root .flag.resp.on{background:#8a6212;border-color:#8a6212;color:#ffffff}
+:root[data-bg="claro"]:root .flag.ebook.on{background:#14110a;border-color:#14110a;color:#ffffff}
+:root[data-bg="claro"]:root .flag.planes.on{background:#ffffff;border-color:#8a6212;color:#8a6212}
 </style>
 
 <div class="login" id="login" hidden>
